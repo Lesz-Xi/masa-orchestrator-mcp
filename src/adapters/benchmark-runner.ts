@@ -64,7 +64,7 @@ export async function runBenchmarks(input: {
 
   const executionResult = await execFileAsync(
     "npx",
-    ["vitest", "run", benchmarkFile],
+    ["vitest", "run", benchmarkFile, "--reporter=verbose"],
     {
       cwd: packageRoot,
       maxBuffer: 10 * 1024 * 1024,
