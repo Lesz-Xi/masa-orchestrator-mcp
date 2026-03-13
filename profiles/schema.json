@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://masa.local/schemas/client-profile.schema.json",
+  "title": "MASA Orchestrator Client Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "displayName",
+    "role",
+    "preferredTransport",
+    "fallbackTransport",
+    "enabledTools",
+    "toolPriority",
+    "strictClaimMode",
+    "delegationAuthority",
+    "defaultTaskLens",
+    "promptTemplate",
+    "outputStyle",
+    "notes"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "enum": ["codex", "claude", "gemini"]
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "enum": ["executor", "specifier", "auditor"]
+    },
+    "preferredTransport": {
+      "type": "string",
+      "enum": ["stdio", "http"]
+    },
+    "fallbackTransport": {
+      "type": "string",
+      "enum": ["stdio", "http", "none"]
+    },
+    "enabledTools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "validate_task_header",
+          "check_notation_compliance",
+          "audit_claims",
+          "benchmark_status",
+          "llm_independence_check",
+          "delegation_chain_state",
+          "generate_consolidation",
+          "validate_assumption_envelope"
+        ]
+      }
+    },
+    "toolPriority": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "validate_task_header",
+          "check_notation_compliance",
+          "audit_claims",
+          "benchmark_status",
+          "llm_independence_check",
+          "delegation_chain_state",
+          "generate_consolidation",
+          "validate_assumption_envelope"
+        ]
+      }
+    },
+    "strictClaimMode": {
+      "type": "string",
+      "enum": ["standard", "strict"]
+    },
+    "delegationAuthority": {
+      "type": "string",
+      "enum": ["read_only", "update_state"]
+    },
+    "defaultTaskLens": {
+      "type": "string",
+      "minLength": 1
+    },
+    "promptTemplate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "outputStyle": {
+      "type": "string",
+      "enum": ["implementation", "review", "audit"]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

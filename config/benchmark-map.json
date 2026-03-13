@@ -1,0 +1,36 @@
+{
+  "suite": "causal-engine-v1",
+  "testFile": "src/lib/compute/__tests__/structural-equation-solver.test.ts",
+  "benchmarks": [
+    {
+      "id": "B1",
+      "name": "B1 Confounded Fork: Y_{do(X=1)} = 1.0",
+      "expectedValue": 1.0
+    },
+    {
+      "id": "B2",
+      "name": "B2 Collider Bias: Y_{do(X=2)} = 1",
+      "expectedValue": 1.0
+    },
+    {
+      "id": "B3",
+      "name": "B3 Simple Chain: Y_{do(X=1)} = 0.48",
+      "expectedValue": 0.48
+    },
+    {
+      "id": "B4",
+      "name": "B4 Common Cause: Y_{do(X=5)} = 1.0",
+      "expectedValue": 1.0
+    },
+    {
+      "id": "B5",
+      "name": "B5 Multi-Intervention: Y_{do(X=2,Z=3)} = 2.6",
+      "expectedValue": 2.6
+    },
+    {
+      "id": "B6",
+      "name": "B6 Diamond Graph: Y_{do(X=2)} = 0.4",
+      "expectedValue": 0.4
+    }
+  ]
+}

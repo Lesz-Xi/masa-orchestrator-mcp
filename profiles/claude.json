@@ -1,0 +1,30 @@
+{
+  "id": "claude",
+  "displayName": "MASA Orchestrator - Claude Profile",
+  "role": "specifier",
+  "preferredTransport": "http",
+  "fallbackTransport": "stdio",
+  "enabledTools": [
+    "validate_task_header",
+    "audit_claims",
+    "check_notation_compliance",
+    "validate_assumption_envelope",
+    "benchmark_status",
+    "generate_consolidation"
+  ],
+  "toolPriority": [
+    "validate_task_header",
+    "audit_claims",
+    "validate_assumption_envelope",
+    "check_notation_compliance"
+  ],
+  "strictClaimMode": "strict",
+  "delegationAuthority": "read_only",
+  "defaultTaskLens": "Specification, review, and claim correction",
+  "promptTemplate": "prompts/claude-system.md",
+  "outputStyle": "review",
+  "notes": [
+    "Use for spec review and ambiguity reduction.",
+    "Do not implement code or update task state directly."
+  ]
+}

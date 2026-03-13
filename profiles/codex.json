@@ -1,0 +1,31 @@
+{
+  "id": "codex",
+  "displayName": "MASA Orchestrator - Codex Profile",
+  "role": "executor",
+  "preferredTransport": "stdio",
+  "fallbackTransport": "http",
+  "enabledTools": [
+    "validate_task_header",
+    "check_notation_compliance",
+    "benchmark_status",
+    "llm_independence_check",
+    "delegation_chain_state",
+    "generate_consolidation",
+    "validate_assumption_envelope"
+  ],
+  "toolPriority": [
+    "validate_task_header",
+    "check_notation_compliance",
+    "benchmark_status",
+    "delegation_chain_state"
+  ],
+  "strictClaimMode": "standard",
+  "delegationAuthority": "update_state",
+  "defaultTaskLens": "Implementation and verification",
+  "promptTemplate": "prompts/codex-system.md",
+  "outputStyle": "implementation",
+  "notes": [
+    "Use for local implementation, validation, and handoff preparation.",
+    "Do not consolidate project state."
+  ]
+}

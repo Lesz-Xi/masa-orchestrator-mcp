@@ -1,0 +1,76 @@
+{
+  "rules": [
+    {
+      "id": "distributional-do-notation",
+      "pattern": "P\\(.*\\|.*do\\(",
+      "severity": "error",
+      "message": "Distributional notation P(Y|do(X)) is forbidden in v1.0 engine scope.",
+      "suggestion": "Use deterministic intervention execution language or Y_{do(X=x)} only in math-facing docs.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core"],
+      "downgradeInClasses": ["docs", "tests", "migrations"]
+    },
+    {
+      "id": "causal-inference-name",
+      "pattern": "causalInference|causal_inference|CausalInference",
+      "severity": "error",
+      "message": "Overclaim: v1.0 engine is not a generic causal inference system.",
+      "suggestion": "Use structural_equation_solver or intervention_execution.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core", "legacy-fallback"],
+      "downgradeInClasses": ["docs", "tests"]
+    },
+    {
+      "id": "estimate-language",
+      "pattern": "\\bestimate[sd]?\\b",
+      "severity": "warning",
+      "message": "v1.0 engine computes deterministic values rather than estimates.",
+      "suggestion": "Prefer compute, calculate, or solve where the code is deterministic.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core", "legacy-fallback"],
+      "contextCheck": true,
+      "downgradeInClasses": ["docs", "tests"]
+    },
+    {
+      "id": "inference-language",
+      "pattern": "\\binfer[sr]?\\b|\\binference\\b",
+      "severity": "warning",
+      "message": "v1.0 scope is deterministic solve/execute, not inference.",
+      "suggestion": "Prefer compute, solve, or execute if the path is deterministic.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core", "legacy-fallback"],
+      "contextCheck": true,
+      "downgradeInClasses": ["docs", "tests"]
+    },
+    {
+      "id": "adjustment-language",
+      "pattern": "adjustment|backdoor|frontdoor",
+      "severity": "error",
+      "message": "Adjustment logic is outside v1.0 engine-core scope.",
+      "suggestion": "Move adjustment claims to deferred scope or support-layer explanation.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core"],
+      "downgradeInClasses": ["docs", "tests"]
+    },
+    {
+      "id": "identifiability-language",
+      "pattern": "identifiab",
+      "severity": "warning",
+      "message": "Identifiability language should be framed carefully under v1.0 assumptions.",
+      "suggestion": "Prefer model completeness or confounder coverage unless formal identifiability is implemented.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core", "legacy-fallback"],
+      "downgradeInClasses": ["docs", "tests"]
+    },
+    {
+      "id": "counterfactual-language",
+      "pattern": "counterfactual",
+      "severity": "error",
+      "message": "Counterfactual reasoning is outside v1.0 engine-core scope.",
+      "suggestion": "Keep counterfactual language out of engine-core files unless explicitly deferred or isolated.",
+      "scopes": ["v1.0-engine", "all"],
+      "includeClasses": ["engine-core"],
+      "downgradeInClasses": ["docs", "tests"]
+    }
+  ]
+}

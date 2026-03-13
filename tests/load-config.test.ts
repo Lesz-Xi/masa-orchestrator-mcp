@@ -1,0 +1,41 @@
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { loadRuntimeConfig } from "../src/config/load-config.js";
+
+const originalEnv = { ...process.env };
+
+afterEach(() => {
+  process.env = { ...originalEnv };
+});
+
+describe("loadRuntimeConfig", () => {
+  it("applies default transport host, port, and path", () => {
+    process.env.AUDIT_ROOT = "/tmp/audit";
+    process.env.ENGINE_ROOT = "/tmp/engine";
+
+    const config = loadRuntimeConfig(import.meta.url);
+
+    expect(config.transport).toBe("stdio");
+    expect(config.host).toBe("127.0.0.1");
+    expect(config.port).toBe(3100);
+    expect(config.path).toBe("/mcp");
+    expect(config.stateFile).toBe(path.join("/tmp/audit", ".orchestration-state.json"));
+  });
+
+  it("rejects invalid transport values", () => {
+    process.env.AUDIT_ROOT = "/tmp/audit";
+    process.env.ENGINE_ROOT = "/tmp/engine";
+    process.env.MCP_TRANSPORT = "sse";
+
+    expect(() => loadRuntimeConfig(import.meta.url)).toThrow();
+  });
+
+  it("fails when required roots are missing", () => {
+    delete process.env.AUDIT_ROOT;
+    delete process.env.ENGINE_ROOT;
+
+    expect(() => loadRuntimeConfig(import.meta.url)).toThrow();
+  });
+});

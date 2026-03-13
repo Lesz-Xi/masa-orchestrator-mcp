@@ -1,0 +1,16 @@
+{
+  "categories": [
+    "variable/model representation",
+    "graph representation",
+    "structural equation representation",
+    "intervention semantics",
+    "graph mutilation execution",
+    "forward solver",
+    "benchmark suite",
+    "validation harness",
+    "query parser",
+    "explanation layer",
+    "orchestration",
+    "documentation"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "guardrails": [
+    { "id": "G1", "title": "Artifacts must map to formal engine state" },
+    { "id": "G2", "title": "LLM cannot be the hidden reasoner" },
+    { "id": "G3", "title": "Tasks require complete spec-mapped headers" },
+    { "id": "G4", "title": "Benchmarks gate consolidation claims" },
+    { "id": "G5", "title": "Reflections must preserve honest capability boundaries" },
+    { "id": "G6", "title": "Track separation between core/support/conceptual work" },
+    { "id": "G7", "title": "Claim and notation discipline are mandatory" },
+    { "id": "G8", "title": "Assumption envelope must stay narrow and explicit" }
+  ]
+}

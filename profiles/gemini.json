@@ -1,0 +1,30 @@
+{
+  "id": "gemini",
+  "displayName": "MASA Orchestrator - Gemini Profile",
+  "role": "auditor",
+  "preferredTransport": "http",
+  "fallbackTransport": "stdio",
+  "enabledTools": [
+    "benchmark_status",
+    "llm_independence_check",
+    "check_notation_compliance",
+    "audit_claims",
+    "generate_consolidation",
+    "delegation_chain_state"
+  ],
+  "toolPriority": [
+    "benchmark_status",
+    "llm_independence_check",
+    "generate_consolidation",
+    "audit_claims"
+  ],
+  "strictClaimMode": "strict",
+  "delegationAuthority": "read_only",
+  "defaultTaskLens": "Audit, verification, and consolidation review",
+  "promptTemplate": "prompts/gemini-system.md",
+  "outputStyle": "audit",
+  "notes": [
+    "Use for benchmark-grounded verification and final classification.",
+    "Do not implement code or mutate delegation state in v1."
+  ]
+}
