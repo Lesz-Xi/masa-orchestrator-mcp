@@ -178,6 +178,59 @@ Recommended split:
 - `mcp.internal.example` → MCP backend
 - `console.internal.example` → operator console
 
+## Recommended Wuweism Deployment
+
+For your current domain, the cleanest split is:
+
+- `https://mcp.wuweism.com` → MASA Orchestrator MCP backend
+- `https://orchestrator.wuweism.com` → MASA Orchestrator operator console
+
+Endpoint mapping:
+
+- backend health: `https://mcp.wuweism.com/health`
+- backend MCP: `https://mcp.wuweism.com/mcp`
+- backend audit log: `https://mcp.wuweism.com/activity`
+- console UI: `https://orchestrator.wuweism.com`
+
+Suggested backend environment:
+
+```bash
+AUDIT_ROOT=/srv/masa/Agentic-Spec-Driven-Audit
+ENGINE_ROOT=/srv/masa/synthesis-engine/src
+STATE_FILE=/srv/masa/Agentic-Spec-Driven-Audit/.orchestration-state.json
+BENCHMARK_TEST_PATH=/srv/masa/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
+MCP_TRANSPORT=http
+MCP_HOST=0.0.0.0
+MCP_PORT=3100
+MCP_PATH=/mcp
+ORCHESTRATOR_API_TOKEN=replace-with-long-random-token
+ORCHESTRATOR_ALLOWED_ORIGINS=https://orchestrator.wuweism.com
+ORCHESTRATOR_RATE_LIMIT_WINDOW_MS=60000
+ORCHESTRATOR_RATE_LIMIT_MAX=60
+ORCHESTRATOR_MAX_BODY_BYTES=1048576
+```
+
+Suggested console environment:
+
+```bash
+ORCHESTRATOR_MCP_URL=https://mcp.wuweism.com/mcp
+ORCHESTRATOR_API_TOKEN=replace-with-the-same-backend-token
+ORCHESTRATOR_CONSOLE_PASSWORD_HASH=scrypt:<salt-hex>:<hash-hex>
+ORCHESTRATOR_CONSOLE_SECRET=replace-with-long-random-secret
+```
+
+Suggested DNS records:
+
+- `mcp.wuweism.com` → your VPS public IP
+- `orchestrator.wuweism.com` → your VPS public IP
+
+If you prefer a single-host path layout instead:
+
+- `https://wuweism.com/orchestrator` → console
+- `https://wuweism.com/orchestrator-api/mcp` → backend
+
+But the subdomain split is cleaner and easier to secure.
+
 ## Single-Instance Warning
 
 The delegation state file uses atomic rename writes, but the server is currently intended for:
@@ -267,6 +320,56 @@ export ENGINE_ROOT=/srv/masa/synthesis-engine/src
 export BENCHMARK_TEST_PATH=/srv/masa/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
 npm run build
 npm run start
+```
+
+Recommended console startup port on the same host:
+
+```bash
+PORT=3200 npm run start
+```
+
+Example Nginx split for `wuweism.com`:
+
+```nginx
+server {
+  server_name mcp.wuweism.com;
+
+  location /health {
+    proxy_pass http://127.0.0.1:3100/health;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  location /activity {
+    proxy_pass http://127.0.0.1:3100/activity;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  location /mcp {
+    proxy_pass http://127.0.0.1:3100/mcp;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 300s;
+    client_max_body_size 2m;
+  }
+}
+
+server {
+  server_name orchestrator.wuweism.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:3200;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}
 ```
 
 ## ChatGPT / Remote MCP Readiness

@@ -4,3 +4,6 @@ dist/
 .orchestration-state.json
 coverage/
 *.log
+console/node_modules/
+console/.next/
+console/coverage/
