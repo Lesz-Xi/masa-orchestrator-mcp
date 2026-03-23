@@ -47,4 +47,40 @@ describe("DelegationStore", () => {
       })
     ).rejects.toThrow("Invalid status transition");
   });
+
+  it("treats same-status updates as idempotent instead of failing", async () => {
+    const dir = makeTempDir("masa-state-");
+    tempDirs.push(dir);
+    const store = new DelegationStore(path.join(dir, ".orchestration-state.json"));
+
+    await store.updateTask({
+      taskId: "TASK-002",
+      taskType: "Implementation",
+      newStatus: "delegated",
+      agent: "gpt",
+      notes: "queued",
+    });
+
+    await store.updateTask({
+      taskId: "TASK-002",
+      newStatus: "in_progress",
+      agent: "gpt",
+      notes: "started",
+    });
+
+    await expect(
+      store.updateTask({
+        taskId: "TASK-002",
+        newStatus: "in_progress",
+        agent: "gpt",
+        notes: "still running",
+      })
+    ).resolves.toBeDefined();
+
+    const state = await store.read();
+    const task = state.tasks.find((entry) => entry.taskId === "TASK-002");
+
+    expect(task?.currentStatus).toBe("in_progress");
+    expect(task?.history.at(-1)?.notes).toBe("still running");
+  });
 });

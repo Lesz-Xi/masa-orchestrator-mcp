@@ -20,6 +20,38 @@ export interface RuntimeConfig {
   port: number;
   path: string;
   workspaceRoot: string;
+  authMode: "none" | "bearer";
+  apiToken?: string;
+  allowedOrigins: string[];
+  requestBodyLimitBytes: number;
+  rateLimitWindowMs: number;
+  rateLimitMaxRequests: number;
+}
+
+export type ToolCategory = "workflow" | "compliance" | "benchmarks" | "delegation" | "consolidation";
+export type ToolRiskLevel = "low" | "medium" | "high";
+export type ToolFieldKind = "text" | "textarea" | "number" | "select" | "string-array";
+
+export interface ToolCatalogField {
+  name: string;
+  label: string;
+  kind: ToolFieldKind;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  defaultValue?: string | number | string[];
+  rows?: number;
+}
+
+export interface ToolCatalogEntry {
+  name: string;
+  displayName: string;
+  category: ToolCategory;
+  riskLevel: ToolRiskLevel;
+  mutatesState: boolean;
+  summary: string;
+  recommendedInputs: string[];
+  fields: ToolCatalogField[];
 }
 
 export interface NotationRule {
@@ -114,11 +146,32 @@ export interface DelegationTask {
   history: DelegationHistoryEntry[];
 }
 
+export type ActivityOutcome =
+  | "success"
+  | "error"
+  | "unauthorized"
+  | "rate_limited"
+  | "bad_request"
+  | "method_not_allowed";
+
+export interface ActivityLogEntry {
+  requestId: string;
+  timestamp: string;
+  toolName: string;
+  outcome: ActivityOutcome;
+  durationMs: number;
+  callerId: string;
+  transport: "http" | "stdio";
+  errorMessage?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
 export interface DelegationStateFile {
-  version: 1;
+  version: 2;
   tasks: DelegationTask[];
   benchmarkSnapshot?: BenchmarkStatusSnapshot;
   blockers: string[];
+  activityLog: ActivityLogEntry[];
 }
 
 export interface OverclaimRule {

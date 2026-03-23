@@ -21,6 +21,7 @@ describe("loadRuntimeConfig", () => {
     expect(config.host).toBe("127.0.0.1");
     expect(config.port).toBe(3100);
     expect(config.path).toBe("/mcp");
+    expect(config.authMode).toBe("none");
     expect(config.stateFile).toBe(path.join("/tmp/audit", ".orchestration-state.json"));
   });
 
@@ -37,5 +38,14 @@ describe("loadRuntimeConfig", () => {
     delete process.env.ENGINE_ROOT;
 
     expect(() => loadRuntimeConfig(import.meta.url)).toThrow();
+  });
+
+  it("requires an API token for HTTP transport", () => {
+    process.env.AUDIT_ROOT = "/tmp/audit";
+    process.env.ENGINE_ROOT = "/tmp/engine";
+    process.env.MCP_TRANSPORT = "http";
+    delete process.env.ORCHESTRATOR_API_TOKEN;
+
+    expect(() => loadRuntimeConfig(import.meta.url)).toThrow("ORCHESTRATOR_API_TOKEN");
   });
 });

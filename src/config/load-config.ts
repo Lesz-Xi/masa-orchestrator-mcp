@@ -50,6 +50,11 @@ const runtimeEnvSchema = z.object({
   MCP_HOST: z.string().min(1).default("127.0.0.1"),
   MCP_PORT: z.coerce.number().int().positive().default(3100),
   MCP_PATH: z.string().min(1).default("/mcp"),
+  ORCHESTRATOR_API_TOKEN: z.string().optional(),
+  ORCHESTRATOR_ALLOWED_ORIGINS: z.string().optional(),
+  ORCHESTRATOR_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  ORCHESTRATOR_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
+  ORCHESTRATOR_MAX_BODY_BYTES: z.coerce.number().int().positive().default(1_048_576),
 });
 
 function readJsonFile<T>(filePath: string, schema: z.ZodType<T>): T {
@@ -65,6 +70,14 @@ export function loadRuntimeConfig(importMetaUrl: string): RuntimeConfig {
   const resolvedEngineRoot = ensureAbsolute(parsed.ENGINE_ROOT, process.cwd());
   const workspaceRoot = path.dirname(resolvedAuditRoot);
   const normalizedPath = parsed.MCP_PATH.startsWith("/") ? parsed.MCP_PATH : `/${parsed.MCP_PATH}`;
+  const allowedOrigins = (parsed.ORCHESTRATOR_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (parsed.MCP_TRANSPORT === "http" && !parsed.ORCHESTRATOR_API_TOKEN) {
+    throw new Error("ORCHESTRATOR_API_TOKEN is required for MCP_TRANSPORT=http.");
+  }
 
   return {
     auditRoot: resolvedAuditRoot,
@@ -81,6 +94,12 @@ export function loadRuntimeConfig(importMetaUrl: string): RuntimeConfig {
     port: parsed.MCP_PORT,
     path: normalizedPath,
     workspaceRoot,
+    authMode: parsed.MCP_TRANSPORT === "http" ? "bearer" : "none",
+    apiToken: parsed.ORCHESTRATOR_API_TOKEN,
+    allowedOrigins,
+    requestBodyLimitBytes: parsed.ORCHESTRATOR_MAX_BODY_BYTES,
+    rateLimitWindowMs: parsed.ORCHESTRATOR_RATE_LIMIT_WINDOW_MS,
+    rateLimitMaxRequests: parsed.ORCHESTRATOR_RATE_LIMIT_MAX,
   };
 }
 

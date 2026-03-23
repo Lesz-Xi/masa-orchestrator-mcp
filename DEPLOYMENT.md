@@ -1,6 +1,9 @@
 # Deployment Guide
 
-This document explains how to deploy `masa-orchestration` for remote Streamable HTTP use.
+This document explains how to deploy `masa-orchestration` as an internal two-part product:
+
+1. the authenticated MCP backend
+2. the internal Next.js operator console
 
 ## Current Deployment Reality
 
@@ -29,6 +32,9 @@ Default routes:
 - `GET /`
 - `GET /health`
 - `POST /mcp`
+- `GET /activity`
+
+The browser should not call `POST /mcp` directly. The operator console proxies requests server-side.
 
 ## Prerequisites
 
@@ -60,6 +66,11 @@ MCP_TRANSPORT=http
 MCP_HOST=0.0.0.0
 MCP_PORT=3100
 MCP_PATH=/mcp
+ORCHESTRATOR_API_TOKEN=replace-with-strong-shared-token
+ORCHESTRATOR_ALLOWED_ORIGINS=https://console.internal.example
+ORCHESTRATOR_RATE_LIMIT_WINDOW_MS=60000
+ORCHESTRATOR_RATE_LIMIT_MAX=60
+ORCHESTRATOR_MAX_BODY_BYTES=1048576
 ```
 
 Recommended:
@@ -67,6 +78,15 @@ Recommended:
 ```bash
 STATE_FILE=/absolute/path/to/Agentic-Spec-Driven-Audit/.orchestration-state.json
 BENCHMARK_TEST_PATH=/absolute/path/to/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
+ORCHESTRATOR_MCP_URL=https://mcp.internal.example/mcp
+ORCHESTRATOR_CONSOLE_PASSWORD_HASH=scrypt:<salt-hex>:<hash-hex>
+ORCHESTRATOR_CONSOLE_SECRET=replace-with-long-random-secret
+```
+
+Hash generation example:
+
+```bash
+node -e "const crypto=require('node:crypto'); const salt=crypto.randomBytes(16); const hash=crypto.scryptSync(process.argv[1], salt, 64); console.log(`scrypt:${salt.toString('hex')}:${hash.toString('hex')}`)" 'replace-with-password'
 ```
 
 ## Start Command
@@ -89,6 +109,29 @@ The server binds to the configured host and port and exposes the MCP endpoint at
 http://<host>:<port>/mcp
 ```
 
+## Console Commands
+
+The operator console lives in `console/`.
+
+Install once:
+
+```bash
+cd console
+npm ci
+```
+
+Run in development:
+
+```bash
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
 ## Health Checks
 
 Use:
@@ -103,10 +146,19 @@ Expected success response:
 {
   "status": "ok",
   "name": "masa-orchestration",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "transport": "http",
-  "path": "/mcp"
+  "path": "/mcp",
+  "authMode": "bearer",
+  "consoleCompatibilityVersion": "1.0.0"
 }
+```
+
+Recent request audit log:
+
+```text
+GET /activity
+Authorization: Bearer <ORCHESTRATOR_API_TOKEN>
 ```
 
 ## Reverse Proxy Requirements
@@ -114,10 +166,17 @@ Expected success response:
 If you deploy behind a reverse proxy or platform router:
 
 - forward `POST /mcp` unchanged
+- forward `GET /activity` to the backend
 - keep HTTPS enabled at the edge
 - do not rewrite the JSON-RPC body
 - do not block long-lived HTTP responses
 - keep `GET /health` reachable for health checks
+- do not expose `ORCHESTRATOR_API_TOKEN` to browser code
+
+Recommended split:
+
+- `mcp.internal.example` → MCP backend
+- `console.internal.example` → operator console
 
 ## Single-Instance Warning
 
@@ -189,7 +248,25 @@ export MCP_TRANSPORT=http
 export MCP_HOST=0.0.0.0
 export MCP_PORT=3100
 export MCP_PATH=/mcp
+export ORCHESTRATOR_API_TOKEN=replace-with-strong-shared-token
+export ORCHESTRATOR_ALLOWED_ORIGINS=https://console.internal.example
 npm run start:http
+```
+
+Console process:
+
+```bash
+cd /srv/masa/masa-orchestrator-mcp/console
+npm ci
+export ORCHESTRATOR_MCP_URL=https://mcp.internal.example/mcp
+export ORCHESTRATOR_API_TOKEN=replace-with-strong-shared-token
+export ORCHESTRATOR_CONSOLE_PASSWORD_HASH=scrypt:<salt-hex>:<hash-hex>
+export ORCHESTRATOR_CONSOLE_SECRET=replace-with-long-random-secret
+export AUDIT_ROOT=/srv/masa/Agentic-Spec-Driven-Audit
+export ENGINE_ROOT=/srv/masa/synthesis-engine/src
+export BENCHMARK_TEST_PATH=/srv/masa/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
+npm run build
+npm run start
 ```
 
 ## ChatGPT / Remote MCP Readiness
@@ -230,10 +307,11 @@ It is not extra product logic. It is the deployment validation list so the serve
 The server is deployable, but these are still true:
 
 - deployment depends on local repo paths existing on the host
-- there is no auth layer yet
+- console auth is shared internal auth, not full multi-operator RBAC
 - there is no multi-instance state coordination yet
 - there is no container recipe yet
 - there is no platform-specific wrapper for dynamic platform ports beyond env configuration
+- request audit history is stored in the shared state file, not a separate durable audit database
 
 ## Recommended First Production Shape
 

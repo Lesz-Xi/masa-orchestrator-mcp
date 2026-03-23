@@ -1,5 +1,6 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
+import { SERVER_NAME } from "./constants.js";
 import { createServer } from "./server.js";
 
 async function main() {
@@ -9,6 +10,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("[masa-orchestration] fatal error", error);
+  console.error(`[${SERVER_NAME}] fatal error`, error);
   process.exitCode = 1;
 });

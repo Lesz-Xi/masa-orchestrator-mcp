@@ -1,8 +1,10 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
+import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 import { loadBenchmarkMap, loadEngineCategories, loadNotationRules, loadRuntimeConfig } from "./config/load-config.js";
 import { DelegationStore } from "./state/delegation-store.js";
+import { TOOL_CATALOG_BY_NAME } from "./shared/tool-catalog.js";
 import { auditClaims, auditClaimsSchema } from "./tools/audit-claims.js";
 import { benchmarkStatus, benchmarkStatusSchema } from "./tools/benchmark-status.js";
 import { checkNotationCompliance, checkNotationSchema } from "./tools/check-notation-compliance.js";
@@ -200,8 +202,8 @@ export function createServerFromDependencies({
 
   const server = new Server(
     {
-      name: "masa-orchestration",
-      version: "1.1.0",
+      name: SERVER_NAME,
+      version: SERVER_VERSION,
     },
     {
       capabilities: {
@@ -213,7 +215,7 @@ export function createServerFromDependencies({
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools.map((tool) => ({
       name: tool.name,
-      description: tool.description,
+      description: TOOL_CATALOG_BY_NAME[tool.name]?.summary ?? tool.description,
       inputSchema: tool.inputSchema,
     })),
   }));
