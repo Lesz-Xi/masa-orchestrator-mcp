@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { OperatorConsole } from "../src/components/operator-console.js";
 
 describe("OperatorConsole", () => {
-  it("renders the workbench shell and tool runner", async () => {
+  it("renders summary-first dashboard and tool runner", async () => {
     global.fetch = async (input: RequestInfo | URL) => {
       const url = String(input);
 
@@ -43,11 +43,61 @@ describe("OperatorConsole", () => {
       }
 
       if (url.endsWith("/api/activity")) {
-        return new Response(JSON.stringify({ activity: [] }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            activity: [
+              {
+                requestId: "req-1",
+                toolName: "benchmark_status",
+                outcome: "success",
+                timestamp: "2026-03-24T01:00:00.000Z",
+                callerId: "ops-chief",
+              },
+            ],
+          }),
+          { status: 200 }
+        );
       }
 
       if (url.endsWith("/api/mcp/call")) {
-        return new Response(JSON.stringify({ structuredContent: { valid: true } }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            structuredContent: url.includes("benchmark_status")
+              ? {
+                  passing: 6,
+                  failing: 0,
+                  notImplemented: 0,
+                  benchmarks: {
+                    B1: { status: "passing", expectedValue: 1, actualValue: 1 },
+                  },
+                  honestCapabilityStatement: "Benchmarks are green.",
+                  llmIndependence: "verified",
+                  notationCompliance: "warning",
+                  consolidationEligible: false,
+                  updatedAt: "2026-03-24T01:00:00.000Z",
+                }
+              : url.includes("delegation_chain_state")
+                ? {
+                    tasks: [
+                      {
+                        taskId: "TASK-001",
+                        taskType: "Integration",
+                        currentStatus: "in_progress",
+                        currentAgent: "gpt",
+                        history: [],
+                      },
+                    ],
+                    blockers: ["Waiting on reviewer"],
+                    pipeline: {
+                      thinkQueue: [],
+                      actQueue: [],
+                      verifyQueue: [],
+                    },
+                  }
+                : { valid: true, normalizedHeader: { taskId: "TASK-001" } },
+          }),
+          { status: 200 }
+        );
       }
 
       return new Response(JSON.stringify({ tasks: [], blockers: [] }), { status: 200 });
@@ -55,8 +105,12 @@ describe("OperatorConsole", () => {
 
     render(<OperatorConsole operatorId="ops-chief" />);
 
-    expect(await screen.findByText("Orchestrator Console")).toBeTruthy();
+    expect(await screen.findByText("Operator Console")).toBeTruthy();
+    expect(await screen.findByText("System truth, delegation flow, and compliance posture in one screen.")).toBeTruthy();
+    expect(await screen.findByText("B1-B6 cached posture")).toBeTruthy();
+    expect(await screen.findByText("Authenticated operator traffic")).toBeTruthy();
     fireEvent.click(screen.getByText("Tool Runner"));
     expect(await screen.findByText("Validate Task Header")).toBeTruthy();
+    expect(await screen.findByText("Result viewer")).toBeTruthy();
   });
 });

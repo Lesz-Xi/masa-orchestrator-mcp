@@ -22,17 +22,25 @@ type DashboardSnapshot = {
 };
 
 type ViewKey = "dashboard" | "delegation" | "benchmarks" | "compliance" | "consolidation" | "tool-runner";
-
 type StoredInputs = Record<string, Record<string, string>>;
 type StoredResults = Record<string, Record<string, unknown>>;
+type StatusTone = "neutral" | "active" | "success" | "warning" | "danger";
+type DelegationTask = Record<string, unknown>;
+type FindingRecord = {
+  title: string;
+  file: string;
+  severity: string;
+  message: string;
+  suggestion: string;
+};
 
-const VIEW_ORDER: Array<{ key: ViewKey; label: string }> = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "delegation", label: "Delegation" },
-  { key: "benchmarks", label: "Benchmarks" },
-  { key: "compliance", label: "Compliance" },
-  { key: "consolidation", label: "Consolidation" },
-  { key: "tool-runner", label: "Tool Runner" },
+const VIEW_ORDER: Array<{ key: ViewKey; label: string; eyebrow: string }> = [
+  { key: "dashboard", label: "Dashboard", eyebrow: "Live posture" },
+  { key: "delegation", label: "Delegation", eyebrow: "Task ledger" },
+  { key: "benchmarks", label: "Benchmarks", eyebrow: "B1-B6" },
+  { key: "compliance", label: "Compliance", eyebrow: "Claim discipline" },
+  { key: "consolidation", label: "Consolidation", eyebrow: "Review cycle" },
+  { key: "tool-runner", label: "Tool Runner", eyebrow: "Structured calls" },
 ];
 
 const RECENT_INPUTS_KEY = "masa.console.recentInputs";
@@ -69,6 +77,31 @@ function formatTimestamp(value: unknown): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(parsed);
+}
+
+function formatRelativeTime(value: string | null): string {
+  if (!value) {
+    return "Not yet refreshed";
+  }
+
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return value;
+  }
+
+  const diffMs = Date.now() - parsed;
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 1) {
+    return "Updated just now";
+  }
+
+  if (diffMinutes < 60) {
+    return `Updated ${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  return `Updated ${diffHours}h ago`;
 }
 
 function stringValue(value: string | number | string[] | undefined): string {
@@ -130,6 +163,199 @@ function isMutation(toolName: string, payload: Record<string, unknown>): boolean
   return toolName === "delegation_chain_state" && payload.action === "update";
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asArray<T = unknown>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asString(value: unknown, fallback = "—"): string {
+  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+}
+
+function toneForState(value: string): StatusTone {
+  const normalized = value.toLowerCase();
+  if (["passing", "verified", "active", "ok", "ready", "completed"].includes(normalized)) {
+    return "success";
+  }
+
+  if (["warning", "violation", "unchecked", "pending_review", "not_implemented", "stale"].includes(normalized)) {
+    return "warning";
+  }
+
+  if (["blocked", "failed", "danger", "invalid", "failing"].includes(normalized)) {
+    return "danger";
+  }
+
+  if (["in_progress", "running", "authenticated", "http"].includes(normalized)) {
+    return "active";
+  }
+
+  return "neutral";
+}
+
+function summarizeBenchmark(benchmark: Record<string, unknown> | undefined) {
+  const benchmarkMap = asRecord(benchmark?.benchmarks);
+  const benchmarkTiles = benchmarkMap
+    ? Object.entries(benchmarkMap).map(([id, value]) => {
+        const result = asRecord(value);
+        return {
+          id,
+          status: asString(result?.status, "unknown"),
+          expected: result?.expectedValue,
+          actual: result?.actualValue,
+          lastRun: formatTimestamp(result?.lastRun),
+        };
+      })
+    : [];
+
+  return {
+    passing: asNumber(benchmark?.passing) ?? 0,
+    failing: asNumber(benchmark?.failing) ?? 0,
+    notImplemented: asNumber(benchmark?.notImplemented) ?? 0,
+    capabilityStatement: asString(benchmark?.honestCapabilityStatement, "No benchmark run cached."),
+    llmIndependence: asString(benchmark?.llmIndependence, "unchecked"),
+    notationCompliance: asString(benchmark?.notationCompliance, "unchecked"),
+    consolidationEligible: benchmark?.consolidationEligible === true,
+    updatedAt: formatTimestamp(benchmark?.updatedAt),
+    tiles: benchmarkTiles,
+    raw: benchmark ?? {},
+  };
+}
+
+function summarizeDelegation(delegation: Record<string, unknown> | undefined) {
+  const tasks = asArray<DelegationTask>(delegation?.tasks);
+  const blockers = asArray<string>(delegation?.blockers);
+  const statusCounts = tasks.reduce<Record<string, number>>((accumulator, task) => {
+    const status = asString(task.currentStatus, "unknown");
+    accumulator[status] = (accumulator[status] ?? 0) + 1;
+    return accumulator;
+  }, {});
+  const activeAgents = [...new Set(tasks.map((task) => asString(task.currentAgent, "")).filter(Boolean))];
+
+  return {
+    tasks,
+    blockers,
+    statusCounts,
+    activeAgents,
+    queue: asRecord(delegation?.pipeline) ?? {},
+    raw: delegation ?? {},
+  };
+}
+
+function summarizeCompliance(latestResult: Record<string, unknown> | null, benchmarkSummary: ReturnType<typeof summarizeBenchmark>) {
+  const findings = [
+    {
+      label: "Notation compliance",
+      value: benchmarkSummary.notationCompliance,
+      tone: toneForState(benchmarkSummary.notationCompliance),
+    },
+    {
+      label: "LLM independence",
+      value: benchmarkSummary.llmIndependence,
+      tone: toneForState(benchmarkSummary.llmIndependence),
+    },
+    {
+      label: "Assumption envelope",
+      value: latestResult?.compliant === true ? "verified" : latestResult ? "needs review" : "not run",
+      tone: latestResult?.compliant === true ? "success" : latestResult ? "warning" : "neutral",
+    },
+  ] as Array<{ label: string; value: string; tone: StatusTone }>;
+
+  const rawViolations = asArray<Record<string, unknown>>(latestResult?.violations);
+  const normalizedViolations: FindingRecord[] = rawViolations.slice(0, 8).map((entry) => ({
+    title: asString(entry.match, "Finding"),
+    file: asString(entry.file, "Path unavailable"),
+    severity: asString(entry.severity, "warning"),
+    message: asString(entry.message, "No description."),
+    suggestion: asString(entry.suggestion, "No remediation guidance."),
+  }));
+
+  return {
+    findings,
+    violations: normalizedViolations,
+    totalFiles: asNumber(latestResult?.filesScanned),
+    compliant: latestResult?.compliant === true,
+    raw: latestResult ?? {},
+  };
+}
+
+function summarizeConsolidation(result: Record<string, unknown> | null) {
+  return {
+    statement: asString(result?.consolidationStatement, "No consolidation run captured yet."),
+    classification: asString(result?.classification, "not_generated"),
+    capabilityStatement: asString(result?.honestCapabilityStatement, "No readiness statement generated."),
+    overclaims: asArray<string>(result?.overclaims),
+    blockers: asArray<string>(result?.blockers),
+    benchmarkEvidence: asRecord(result?.benchmarkEvidence) ?? {},
+    raw: result ?? {},
+  };
+}
+
+function summarizeToolResult(result: Record<string, unknown> | null) {
+  if (!result) {
+    return {
+      label: "No result cached",
+      tone: "neutral" as StatusTone,
+      details: [] as Array<{ label: string; value: string }>,
+    };
+  }
+
+  const detailPairs = Object.entries(result)
+    .slice(0, 6)
+    .map(([key, value]) => ({
+      label: key,
+      value: typeof value === "object" ? "Structured payload" : String(value),
+    }));
+
+  if ("valid" in result) {
+    return {
+      label: result.valid === true ? "Validation passed" : "Validation failed",
+      tone: result.valid === true ? ("success" as StatusTone) : ("danger" as StatusTone),
+      details: detailPairs,
+    };
+  }
+
+  if ("success" in result) {
+    return {
+      label: result.success === true ? "Action completed" : "Action reported issues",
+      tone: result.success === true ? ("success" as StatusTone) : ("warning" as StatusTone),
+      details: detailPairs,
+    };
+  }
+
+  return {
+    label: "Structured response ready",
+    tone: "active" as StatusTone,
+    details: detailPairs,
+  };
+}
+
+function StatusBadge({ tone, children }: { tone: StatusTone; children: React.ReactNode }) {
+  return <span className={`status-badge tone-${tone}`}>{children}</span>;
+}
+
+function RawDisclosure({ title, payload }: { title: string; payload: Record<string, unknown> | unknown[] }) {
+  return (
+    <details className="raw-disclosure">
+      <summary>{title}</summary>
+      <pre>{JSON.stringify(payload, null, 2)}</pre>
+    </details>
+  );
+}
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return <div className="empty-card">{children}</div>;
+}
+
 export function OperatorConsole({ operatorId }: { operatorId: string }) {
   const [view, setView] = useState<ViewKey>("dashboard");
   const [bootstrap, setBootstrap] = useState<BootstrapPayload | null>(null);
@@ -142,6 +368,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmMutation, setConfirmMutation] = useState(false);
+  const [lastRefreshAt, setLastRefreshAt] = useState<string | null>(null);
 
   useEffect(() => {
     setFormValues(parseStoredJson<StoredInputs>(RECENT_INPUTS_KEY, {}));
@@ -175,6 +402,23 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
     [bootstrap, selectedToolName]
   );
 
+  const activeResult = liveResult ?? (selectedTool ? recentResults[selectedTool.name] ?? null : null);
+  const benchmarkSummary = useMemo(() => summarizeBenchmark(dashboard.benchmark), [dashboard.benchmark]);
+  const delegationSummary = useMemo(() => summarizeDelegation(dashboard.delegation), [dashboard.delegation]);
+  const complianceSummary = useMemo(
+    () => summarizeCompliance(activeResult, benchmarkSummary),
+    [activeResult, benchmarkSummary]
+  );
+  const consolidationResult =
+    liveResult && ("consolidationStatement" in liveResult || "classification" in liveResult)
+      ? liveResult
+      : (recentResults.generate_consolidation ?? null);
+  const consolidationSummary = useMemo(
+    () => summarizeConsolidation(consolidationResult),
+    [consolidationResult]
+  );
+  const toolResultSummary = useMemo(() => summarizeToolResult(activeResult), [activeResult]);
+
   async function loadBootstrap() {
     setLoading(true);
     setError(null);
@@ -198,8 +442,9 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
 
       setBootstrap(bootstrapPayload);
       setActivity(activityPayload.activity);
-      setSelectedToolName(bootstrapPayload.tools[0]?.name || selectedToolName);
+      setSelectedToolName((previous) => previous || bootstrapPayload.tools[0]?.name || "validate_task_header");
       await loadDashboard(bootstrapPayload);
+      setLastRefreshAt(new Date().toISOString());
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load console.");
     } finally {
@@ -213,10 +458,14 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
     }
 
     const benchmarkPromise = currentBootstrap.defaults.benchmarkTestPath
-      ? runTool("benchmark_status", {
-          testPath: currentBootstrap.defaults.benchmarkTestPath,
-          action: "report",
-        }, false)
+      ? runTool(
+          "benchmark_status",
+          {
+            testPath: currentBootstrap.defaults.benchmarkTestPath,
+            action: "report",
+          },
+          false
+        )
       : Promise.resolve(undefined);
 
     const delegationPromise = runTool("delegation_chain_state", { action: "get" }, false);
@@ -228,6 +477,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
       benchmark,
       delegation,
     }));
+    setLastRefreshAt(new Date().toISOString());
   }
 
   async function runTool(
@@ -270,6 +520,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
           ...previous,
           [toolName]: result.structuredContent as Record<string, unknown>,
         }));
+        setLastRefreshAt(new Date().toISOString());
       }
 
       return result.structuredContent;
@@ -293,7 +544,10 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
 
     const saved = formValues[selectedTool.name] || {};
     return Object.fromEntries(
-      selectedTool.fields.map((field) => [field.name, saved[field.name] ?? inferDefaultValue(selectedTool, field, bootstrap.defaults)])
+      selectedTool.fields.map((field) => [
+        field.name,
+        saved[field.name] ?? inferDefaultValue(selectedTool, field, bootstrap.defaults),
+      ])
     );
   }
 
@@ -347,67 +601,207 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
     }));
   }
 
+  async function signOut() {
+    await fetch("/api/session/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
+
   function renderDashboard() {
+    const compliancePosture = complianceSummary.findings;
+    const recentActivity = activity.slice(0, 4);
+
     return (
       <section className="workspace-stack">
-        <div className="hero-card">
-          <div className="meta-chip">Operator / {operatorId}</div>
-          <h2>MASA orchestration remains a trust-first instrument.</h2>
-          <p>
-            Remote HTTP is authenticated, the MCP backend stays authoritative, and the console only speaks
-            through the server-side proxy layer.
-          </p>
-        </div>
+        <section className="hero-panel">
+          <div className="hero-copy">
+            <div className="meta-chip">MASA / authenticated operator surface</div>
+            <h2>System truth, delegation flow, and compliance posture in one screen.</h2>
+            <p>
+              The shell now leads with verified benchmark posture, active delegation pressure, and recent
+              authenticated MCP traffic instead of raw payload blocks.
+            </p>
+          </div>
+          <div className="hero-signal">
+            <span className="signal-label">Capability statement</span>
+            <p>{benchmarkSummary.capabilityStatement}</p>
+            <div className="signal-chip-row">
+              <StatusBadge tone={benchmarkSummary.consolidationEligible ? "success" : "warning"}>
+                {benchmarkSummary.consolidationEligible ? "Consolidation ready" : "Not consolidation-ready"}
+              </StatusBadge>
+              <StatusBadge tone={toneForState(benchmarkSummary.notationCompliance)}>
+                Notation {benchmarkSummary.notationCompliance}
+              </StatusBadge>
+            </div>
+          </div>
+        </section>
 
-        <div className="metric-grid">
-          <article className="metric-card">
+        <div className="metric-grid compact-metric-grid">
+          <article className="metric-card metric-card-emphasis">
             <span className="metric-label">Transport</span>
-            <strong>{String(bootstrap?.health?.transport || "—")}</strong>
-            <span className="metric-subtle">Auth {String(bootstrap?.health?.authMode || "—")}</span>
+            <strong>{asString(bootstrap?.health?.transport)}</strong>
+            <span className="metric-subtle">Auth {asString(bootstrap?.health?.authMode)}</span>
           </article>
           <article className="metric-card">
-            <span className="metric-label">Benchmarks</span>
-            <strong>{String(dashboard.benchmark?.passing ?? "—")} passing</strong>
+            <span className="metric-label">Benchmark state</span>
+            <strong>{benchmarkSummary.passing}</strong>
             <span className="metric-subtle">
-              {String(dashboard.benchmark?.notImplemented ?? "—")} not implemented
+              {benchmarkSummary.failing} failing · {benchmarkSummary.notImplemented} pending
             </span>
           </article>
           <article className="metric-card">
-            <span className="metric-label">Delegation Tasks</span>
-            <strong>{Array.isArray(dashboard.delegation?.tasks) ? dashboard.delegation?.tasks.length : "—"}</strong>
-            <span className="metric-subtle">
-              {Array.isArray(dashboard.delegation?.blockers) ? dashboard.delegation?.blockers.length : "—"} blockers
-            </span>
+            <span className="metric-label">Delegation state</span>
+            <strong>{delegationSummary.tasks.length}</strong>
+            <span className="metric-subtle">{delegationSummary.blockers.length} blockers tracked</span>
           </article>
           <article className="metric-card">
             <span className="metric-label">Compatibility</span>
-            <strong>{String(bootstrap?.health?.consoleCompatibilityVersion || "—")}</strong>
+            <strong>{asString(bootstrap?.health?.consoleCompatibilityVersion)}</strong>
             <span className="metric-subtle">Console handshake contract</span>
           </article>
         </div>
 
-        <div className="panel-grid">
+        <div className="dashboard-grid">
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Benchmark posture</h3>
-                <p>Current cached B1-B6 state and capability statement.</p>
+                <span className="eyebrow">System posture</span>
+                <h3>Backend trust boundary</h3>
+              </div>
+            </header>
+            <dl className="data-list">
+              <div>
+                <dt>Health</dt>
+                <dd><StatusBadge tone="success">Healthy</StatusBadge></dd>
+              </div>
+              <div>
+                <dt>Transport</dt>
+                <dd>{asString(bootstrap?.health?.transport)}</dd>
+              </div>
+              <div>
+                <dt>Auth mode</dt>
+                <dd>{asString(bootstrap?.health?.authMode)}</dd>
+              </div>
+              <div>
+                <dt>MCP path</dt>
+                <dd>{asString(bootstrap?.health?.path)}</dd>
+              </div>
+              <div>
+                <dt>Last refresh</dt>
+                <dd>{formatRelativeTime(lastRefreshAt)}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article className="panel-card">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Benchmark state</span>
+                <h3>B1-B6 cached posture</h3>
               </div>
               <button className="secondary-button" onClick={() => void loadDashboard()}>
                 Refresh
               </button>
             </header>
-            <pre>{JSON.stringify(dashboard.benchmark ?? {}, null, 2)}</pre>
+            {benchmarkSummary.tiles.length === 0 ? (
+              <EmptyState>No benchmark run cached.</EmptyState>
+            ) : (
+              <div className="mini-tile-grid">
+                {benchmarkSummary.tiles.map((tile) => (
+                  <article key={tile.id} className="mini-tile">
+                    <div className="mini-tile-header">
+                      <strong>{tile.id}</strong>
+                      <StatusBadge tone={toneForState(tile.status)}>{tile.status}</StatusBadge>
+                    </div>
+                    <span>Expected {String(tile.expected ?? "—")}</span>
+                    <span>Actual {String(tile.actual ?? "—")}</span>
+                  </article>
+                ))}
+              </div>
+            )}
+            <RawDisclosure title="View raw benchmark payload" payload={benchmarkSummary.raw} />
           </article>
 
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Delegation queues</h3>
-                <p>Live queue state from the shared orchestration file.</p>
+                <span className="eyebrow">Delegation state</span>
+                <h3>Live queues and blockers</h3>
               </div>
             </header>
-            <pre>{JSON.stringify(dashboard.delegation ?? {}, null, 2)}</pre>
+            <div className="status-chip-row">
+              {Object.keys(delegationSummary.statusCounts).length === 0 ? (
+                <EmptyState>No delegation tasks recorded.</EmptyState>
+              ) : (
+                Object.entries(delegationSummary.statusCounts).map(([status, count]) => (
+                  <StatusBadge key={status} tone={toneForState(status)}>
+                    {status} · {count}
+                  </StatusBadge>
+                ))
+              )}
+            </div>
+            <div className="summary-subgrid">
+              <div className="summary-block">
+                <span className="summary-label">Active agents</span>
+                <p>{delegationSummary.activeAgents.join(", ") || "No active agents recorded."}</p>
+              </div>
+              <div className="summary-block">
+                <span className="summary-label">Blockers</span>
+                {delegationSummary.blockers.length === 0 ? (
+                  <p>No blockers recorded.</p>
+                ) : (
+                  <div className="chip-stack">
+                    {delegationSummary.blockers.slice(0, 4).map((blocker) => (
+                      <StatusBadge key={blocker} tone="warning">
+                        {blocker}
+                      </StatusBadge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <RawDisclosure title="View raw delegation payload" payload={delegationSummary.raw} />
+          </article>
+
+          <article className="panel-card">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Compliance posture</span>
+                <h3>Claim discipline signals</h3>
+              </div>
+            </header>
+            <div className="signal-row">
+              {compliancePosture.map((entry) => (
+                <div key={entry.label} className="signal-cell">
+                  <span>{entry.label}</span>
+                  <StatusBadge tone={entry.tone}>{entry.value}</StatusBadge>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel-card panel-card-wide">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Recent activity</span>
+                <h3>Authenticated operator traffic</h3>
+              </div>
+            </header>
+            {recentActivity.length === 0 ? (
+              <EmptyState>No recent audit traffic.</EmptyState>
+            ) : (
+              <div className="activity-table">
+                {recentActivity.map((entry) => (
+                  <div key={entry.requestId} className="activity-row">
+                    <div>
+                      <strong>{entry.toolName}</strong>
+                      <span>{entry.callerId || "operator"}</span>
+                    </div>
+                    <StatusBadge tone={toneForState(entry.outcome)}>{entry.outcome}</StatusBadge>
+                    <time>{formatTimestamp(entry.timestamp)}</time>
+                  </div>
+                ))}
+              </div>
+            )}
           </article>
         </div>
       </section>
@@ -415,52 +809,101 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
   }
 
   function renderDelegation() {
-    const tasks = Array.isArray(dashboard.delegation?.tasks) ? (dashboard.delegation?.tasks as Array<Record<string, unknown>>) : [];
-
     return (
       <section className="workspace-stack">
         <div className="section-heading">
           <div>
             <div className="meta-chip">Delegation / live state</div>
-            <h2>Task and blocker ledger</h2>
+            <h2>Task ledger and transition detail</h2>
           </div>
           <button className="secondary-button" onClick={() => void loadDashboard()}>
             Refresh queues
           </button>
         </div>
-        <div className="panel-grid">
+
+        <div className="panel-grid split-panel-grid">
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Tasks</h3>
-                <p>Status, ownership, and transition history.</p>
+                <span className="eyebrow">Task ledger</span>
+                <h3>Current tracked tasks</h3>
               </div>
             </header>
-            {tasks.length === 0 ? (
-              <div className="empty-card">No delegation tasks recorded yet.</div>
+            {delegationSummary.tasks.length === 0 ? (
+              <EmptyState>No delegation tasks recorded yet.</EmptyState>
             ) : (
-              <div className="timeline-list">
-                {tasks.map((task) => (
-                  <div key={String(task.taskId)} className="timeline-item">
-                    <div>
-                      <strong>{String(task.taskId)}</strong>
-                      <span>{String(task.currentStatus)}</span>
-                    </div>
-                    <p>{String(task.currentAgent)}</p>
-                  </div>
-                ))}
+              <div className="ledger-table">
+                {delegationSummary.tasks.map((task) => {
+                  const history = asArray<Record<string, unknown>>(task.history);
+                  return (
+                    <details key={String(task.taskId)} className="ledger-row">
+                      <summary>
+                        <div className="ledger-main">
+                          <strong>{asString(task.taskId)}</strong>
+                          <span>{asString(task.taskType)}</span>
+                        </div>
+                        <div className="ledger-meta">
+                          <StatusBadge tone={toneForState(asString(task.currentStatus))}>
+                            {asString(task.currentStatus)}
+                          </StatusBadge>
+                          <span>{asString(task.currentAgent, "unassigned")}</span>
+                        </div>
+                      </summary>
+                      <div className="ledger-detail">
+                        <div className="detail-grid">
+                          <div>
+                            <span className="summary-label">History depth</span>
+                            <p>{history.length} transitions</p>
+                          </div>
+                          <div>
+                            <span className="summary-label">Current owner</span>
+                            <p>{asString(task.currentAgent, "unassigned")}</p>
+                          </div>
+                        </div>
+                        {history.length === 0 ? (
+                          <EmptyState>No transition history captured.</EmptyState>
+                        ) : (
+                          <div className="history-list">
+                            {history.map((entry, index) => (
+                              <div key={`${String(task.taskId)}-${index}`} className="history-item">
+                                <div className="history-heading">
+                                  <StatusBadge tone={toneForState(asString(entry.status))}>
+                                    {asString(entry.status)}
+                                  </StatusBadge>
+                                  <time>{formatTimestamp(entry.timestamp)}</time>
+                                </div>
+                                <p>{asString(entry.notes, "No notes recorded.")}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             )}
           </article>
 
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Blockers</h3>
-                <p>Outstanding items preventing clean consolidation.</p>
+                <span className="eyebrow">Blockers</span>
+                <h3>Items preventing clean completion</h3>
               </div>
             </header>
-            <pre>{JSON.stringify(dashboard.delegation?.blockers ?? [], null, 2)}</pre>
+            {delegationSummary.blockers.length === 0 ? (
+              <EmptyState>No blockers recorded.</EmptyState>
+            ) : (
+              <div className="chip-stack">
+                {delegationSummary.blockers.map((blocker) => (
+                  <StatusBadge key={blocker} tone="warning">
+                    {blocker}
+                  </StatusBadge>
+                ))}
+              </div>
+            )}
+            <RawDisclosure title="View raw delegation payload" payload={delegationSummary.raw} />
           </article>
         </div>
       </section>
@@ -468,17 +911,12 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
   }
 
   function renderBenchmarks() {
-    const benchmark = (dashboard.benchmark ?? {}) as Record<string, unknown>;
-    const benchmarkEntries = benchmark.benchmarks && typeof benchmark.benchmarks === "object"
-      ? Object.entries(benchmark.benchmarks as Record<string, Record<string, unknown>>)
-      : [];
-
     return (
       <section className="workspace-stack">
         <div className="section-heading">
           <div>
             <div className="meta-chip">Benchmarks / B1-B6</div>
-            <h2>Deterministic evidence status</h2>
+            <h2>Deterministic evidence board</h2>
           </div>
           <button
             className="primary-button"
@@ -498,24 +936,59 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
             Run benchmark suite
           </button>
         </div>
-        <div className="metric-grid">
-          {benchmarkEntries.map(([id, result]) => (
-            <article key={id} className="metric-card">
-              <span className="metric-label">{id}</span>
-              <strong>{String(result.status || "—")}</strong>
-              <span className="metric-subtle">Expected {String(result.expectedValue || "—")}</span>
-            </article>
-          ))}
-        </div>
-        <article className="panel-card">
-          <header>
-            <div>
-              <h3>Capability statement</h3>
-              <p>Current truthful readiness output.</p>
+
+        <div className="panel-grid split-panel-grid">
+          <article className="panel-card">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Benchmark board</span>
+                <h3>Current B1-B6 statuses</h3>
+              </div>
+            </header>
+            {benchmarkSummary.tiles.length === 0 ? (
+              <EmptyState>No benchmark run cached.</EmptyState>
+            ) : (
+              <div className="benchmark-board">
+                {benchmarkSummary.tiles.map((tile) => (
+                  <article key={tile.id} className="benchmark-tile">
+                    <div className="benchmark-head">
+                      <strong>{tile.id}</strong>
+                      <StatusBadge tone={toneForState(tile.status)}>{tile.status}</StatusBadge>
+                    </div>
+                    <div className="benchmark-meta">
+                      <span>Expected {String(tile.expected ?? "—")}</span>
+                      <span>Actual {String(tile.actual ?? "—")}</span>
+                      <span>{tile.lastRun}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </article>
+
+          <article className="panel-card">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Decision panel</span>
+                <h3>Capability and gating</h3>
+              </div>
+            </header>
+            <div className="signal-text">{benchmarkSummary.capabilityStatement}</div>
+            <div className="status-chip-row">
+              <StatusBadge tone={toneForState(benchmarkSummary.llmIndependence)}>
+                LLM independence · {benchmarkSummary.llmIndependence}
+              </StatusBadge>
+              <StatusBadge tone={toneForState(benchmarkSummary.notationCompliance)}>
+                Notation · {benchmarkSummary.notationCompliance}
+              </StatusBadge>
+              <StatusBadge tone={benchmarkSummary.consolidationEligible ? "success" : "warning"}>
+                {benchmarkSummary.consolidationEligible ? "Eligible" : "Not eligible"}
+              </StatusBadge>
             </div>
-          </header>
-          <div className="signal-text">{String(benchmark.honestCapabilityStatement || "No benchmark snapshot yet.")}</div>
-        </article>
+            <p className="support-copy">Last benchmark update: {benchmarkSummary.updatedAt}</p>
+            <RawDisclosure title="View raw benchmark payload" payload={benchmarkSummary.raw} />
+          </article>
+        </div>
       </section>
     );
   }
@@ -526,18 +999,19 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
         <div className="section-heading">
           <div>
             <div className="meta-chip">Compliance / evidence-aware</div>
-            <h2>Notation, claim, and LLM independence controls</h2>
+            <h2>Claim discipline and repo guardrails</h2>
           </div>
         </div>
-        <div className="panel-grid">
+
+        <div className="panel-grid split-panel-grid">
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Fast scans</h3>
-                <p>Run the most common compliance checks with repo defaults.</p>
+                <span className="eyebrow">Quick actions</span>
+                <h3>Common compliance scans</h3>
               </div>
             </header>
-            <div className="action-stack">
+            <div className="action-grid">
               <button
                 className="secondary-button"
                 onClick={() =>
@@ -573,19 +1047,46 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
                     : undefined
                 }
               >
-                Validate assumption envelope
+                Validate assumptions
               </button>
+            </div>
+            <div className="signal-row">
+              {complianceSummary.findings.map((entry) => (
+                <div key={entry.label} className="signal-cell">
+                  <span>{entry.label}</span>
+                  <StatusBadge tone={entry.tone}>{entry.value}</StatusBadge>
+                </div>
+              ))}
             </div>
           </article>
 
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Latest result</h3>
-                <p>Structured output from the current compliance action.</p>
+                <span className="eyebrow">Latest findings</span>
+                <h3>Operator-safe summary</h3>
               </div>
             </header>
-            <pre>{JSON.stringify(liveResult ?? {}, null, 2)}</pre>
+            {complianceSummary.violations.length === 0 ? (
+              <EmptyState>
+                {activeResult ? "No structured violations were returned for the latest compliance action." : "Run a compliance action to populate findings."}
+              </EmptyState>
+            ) : (
+              <div className="finding-list">
+                {complianceSummary.violations.map((violation) => (
+                  <article key={`${violation.file}-${violation.title}`} className="finding-card">
+                    <div className="finding-head">
+                      <StatusBadge tone={toneForState(violation.severity)}>{violation.severity}</StatusBadge>
+                      <strong>{violation.title}</strong>
+                    </div>
+                    <p>{violation.message}</p>
+                    <span className="finding-path">{violation.file}</span>
+                    <span className="finding-suggestion">{violation.suggestion}</span>
+                  </article>
+                ))}
+              </div>
+            )}
+            <RawDisclosure title="View raw compliance payload" payload={complianceSummary.raw} />
           </article>
         </div>
       </section>
@@ -598,7 +1099,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
         <div className="section-heading">
           <div>
             <div className="meta-chip">Consolidation / review cycle</div>
-            <h2>Readiness statement and blockers</h2>
+            <h2>Readiness statement and blocker scope</h2>
           </div>
           <button
             className="primary-button"
@@ -607,15 +1108,67 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
             Generate cycle 1 statement
           </button>
         </div>
-        <article className="panel-card">
-          <header>
-            <div>
-              <h3>Latest consolidation result</h3>
-              <p>Conservative summary from verified benchmark and blocker state.</p>
+
+        <div className="panel-grid split-panel-grid">
+          <article className="panel-card">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Readiness statement</span>
+                <h3>Latest consolidation output</h3>
+              </div>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => void navigator.clipboard?.writeText(consolidationSummary.statement)}
+              >
+                Copy statement
+              </button>
+            </header>
+            <div className="signal-text">{consolidationSummary.statement}</div>
+            <div className="status-chip-row">
+              <StatusBadge tone={toneForState(consolidationSummary.classification)}>
+                {consolidationSummary.classification}
+              </StatusBadge>
             </div>
-          </header>
-          <pre>{JSON.stringify(liveResult ?? recentResults.generate_consolidation ?? {}, null, 2)}</pre>
-        </article>
+            <p className="support-copy">{consolidationSummary.capabilityStatement}</p>
+          </article>
+
+          <article className="panel-card">
+            <header className="panel-heading">
+              <div>
+                <span className="eyebrow">Blockers and overclaims</span>
+                <h3>Review detail</h3>
+              </div>
+            </header>
+            <div className="summary-subgrid">
+              <div className="summary-block">
+                <span className="summary-label">Overclaims</span>
+                {consolidationSummary.overclaims.length === 0 ? (
+                  <p>No overclaims reported.</p>
+                ) : (
+                  <ul className="bullet-list">
+                    {consolidationSummary.overclaims.slice(0, 5).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="summary-block">
+                <span className="summary-label">Blockers</span>
+                {consolidationSummary.blockers.length === 0 ? (
+                  <p>No blockers recorded.</p>
+                ) : (
+                  <ul className="bullet-list">
+                    {consolidationSummary.blockers.slice(0, 5).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <RawDisclosure title="View raw consolidation payload" payload={consolidationSummary.raw} />
+          </article>
+        </div>
       </section>
     );
   }
@@ -624,7 +1177,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
     const values = currentFormValues();
 
     if (!selectedTool) {
-      return <div className="empty-card">No tool selected.</div>;
+      return <EmptyState>No tool selected.</EmptyState>;
     }
 
     return (
@@ -638,12 +1191,12 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
           </div>
         </div>
 
-        <div className="panel-grid">
+        <div className="panel-grid split-panel-grid">
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Structured input</h3>
-                <p>{selectedTool.summary}</p>
+                <span className="eyebrow">Structured input</span>
+                <h3>{selectedTool.summary}</h3>
               </div>
             </header>
 
@@ -696,7 +1249,11 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
                 <button className="primary-button" type="submit" disabled={loading}>
                   {loading ? "Running…" : "Run tool"}
                 </button>
-                <button className="secondary-button" type="button" onClick={() => setLiveResult(recentResults[selectedTool.name] ?? null)}>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setLiveResult(recentResults[selectedTool.name] ?? null)}
+                >
                   Load last result
                 </button>
               </div>
@@ -704,13 +1261,31 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
           </article>
 
           <article className="panel-card">
-            <header>
+            <header className="panel-heading">
               <div>
-                <h3>Result</h3>
-                <p>Structured JSON with the latest execution metadata.</p>
+                <span className="eyebrow">Result viewer</span>
+                <h3>{toolResultSummary.label}</h3>
               </div>
+              <StatusBadge tone={toolResultSummary.tone}>{toolResultSummary.label}</StatusBadge>
             </header>
-            <pre>{JSON.stringify(liveResult ?? recentResults[selectedTool.name] ?? {}, null, 2)}</pre>
+
+            {toolResultSummary.details.length === 0 ? (
+              <EmptyState>No result cached for this tool yet.</EmptyState>
+            ) : (
+              <div className="data-list compact-data-list">
+                {toolResultSummary.details.map((detail) => (
+                  <div key={detail.label}>
+                    <dt>{detail.label}</dt>
+                    <dd>{detail.value}</dd>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <RawDisclosure
+              title="View raw tool result"
+              payload={activeResult ?? recentResults[selectedTool.name] ?? {}}
+            />
           </article>
         </div>
       </section>
@@ -718,13 +1293,29 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
   }
 
   return (
-    <main className="console-shell">
-      <aside className="console-nav">
-        <div className="nav-header">
-          <div className="meta-chip">MASA workbench</div>
-          <h1>Orchestrator Console</h1>
-          <p>Internal operator surface for guarded MCP execution.</p>
+    <main className="console-shell overhaul-shell">
+      <aside className="console-nav compact-nav">
+        <div className="nav-brand">
+          <div className="meta-chip">MASA / workbench</div>
+          <div>
+            <h1>Operator Console</h1>
+            <p>Dense review surface for benchmark truth, delegation flow, and guarded MCP execution.</p>
+          </div>
         </div>
+
+        <div className="nav-identity">
+          <div>
+            <span className="summary-label">Operator</span>
+            <strong>{operatorId}</strong>
+          </div>
+          <div>
+            <span className="summary-label">Transport</span>
+            <StatusBadge tone={toneForState(asString(bootstrap?.health?.transport, "http"))}>
+              {asString(bootstrap?.health?.transport)}
+            </StatusBadge>
+          </div>
+        </div>
+
         <nav className="nav-stack">
           {VIEW_ORDER.map((item) => (
             <button
@@ -732,18 +1323,32 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
               className={`nav-link ${view === item.key ? "active" : ""}`}
               onClick={() => setView(item.key)}
             >
-              {item.label}
+              <span>{item.label}</span>
+              <small>{item.eyebrow}</small>
             </button>
           ))}
         </nav>
-
-        <div className="nav-footer">
-          <span className="meta-chip">Operator / {operatorId}</span>
-          <span className="meta-chip">Auth / {String(bootstrap?.health?.authMode || "…")}</span>
-        </div>
       </aside>
 
       <section className="console-workspace">
+        <div className="utility-strip">
+          <div className="utility-cluster">
+            <StatusBadge tone="success">Backend healthy</StatusBadge>
+            <StatusBadge tone={toneForState(asString(bootstrap?.health?.authMode, "bearer"))}>
+              Auth {asString(bootstrap?.health?.authMode)}
+            </StatusBadge>
+            <span className="utility-meta">{formatRelativeTime(lastRefreshAt)}</span>
+          </div>
+          <div className="utility-cluster">
+            <button className="secondary-button" onClick={() => void loadBootstrap()}>
+              {loading ? "Refreshing…" : "Refresh console"}
+            </button>
+            <button className="secondary-button" onClick={() => void signOut()}>
+              Sign out
+            </button>
+          </div>
+        </div>
+
         {error ? <div className="warning-card">{error}</div> : null}
         {view === "dashboard" && renderDashboard()}
         {view === "delegation" && renderDelegation()}
@@ -753,23 +1358,23 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
         {view === "tool-runner" && renderToolRunner()}
       </section>
 
-      <aside className="console-rail">
+      <aside className="console-rail sticky-rail">
         <article className="rail-card">
-          <header>
+          <header className="panel-heading">
             <div>
-              <h3>Recent audit activity</h3>
-              <p>Latest authenticated HTTP tool traffic.</p>
+              <span className="eyebrow">Recent activity</span>
+              <h3>Authenticated MCP traffic</h3>
             </div>
           </header>
           <div className="timeline-list">
             {activity.length === 0 ? (
-              <div className="empty-card">No audit activity recorded yet.</div>
+              <EmptyState>No recent audit traffic.</EmptyState>
             ) : (
-              activity.map((entry) => (
-                <div key={entry.requestId} className="timeline-item">
+              activity.slice(0, 6).map((entry) => (
+                <div key={entry.requestId} className="timeline-item compact-timeline-item">
                   <div>
                     <strong>{entry.toolName}</strong>
-                    <span>{entry.outcome}</span>
+                    <StatusBadge tone={toneForState(entry.outcome)}>{entry.outcome}</StatusBadge>
                   </div>
                   <p>{formatTimestamp(entry.timestamp)}</p>
                 </div>
@@ -779,18 +1384,28 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
         </article>
 
         <article className="rail-card">
-          <header>
+          <header className="panel-heading">
             <div>
-              <h3>Trust rail</h3>
-              <p>Evidence, provenance, and operator-safe defaults.</p>
+              <span className="eyebrow">Trust rail</span>
+              <h3>Provenance defaults</h3>
             </div>
           </header>
           <ul className="signal-list">
             <li>Browser traffic never carries the MCP bearer token.</li>
-            <li>State mutations require explicit confirmation.</li>
-            <li>Benchmark and consolidation output remain structured, not freeform.</li>
-            <li>Recent runs persist locally for operator continuity.</li>
+            <li>State mutations require explicit confirmation before dispatch.</li>
+            <li>Raw JSON stays available, but only as secondary evidence.</li>
+            <li>Recent results persist locally to preserve operator continuity.</li>
           </ul>
+        </article>
+
+        <article className="rail-card">
+          <header className="panel-heading">
+            <div>
+              <span className="eyebrow">Evidence inspector</span>
+              <h3>Current raw payload</h3>
+            </div>
+          </header>
+          <RawDisclosure title="Open structured payload" payload={activeResult ?? dashboard.benchmark ?? {}} />
         </article>
       </aside>
     </main>
