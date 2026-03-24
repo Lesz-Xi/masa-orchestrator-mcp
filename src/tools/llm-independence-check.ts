@@ -16,7 +16,10 @@ export async function llmIndependenceCheck(
   input: z.infer<typeof llmIndependenceSchema>,
   runtimeConfig: RuntimeConfig
 ) {
-  const files = await collectFiles(input.enginePath, "**/*.ts");
+  const files = await collectFiles(input.enginePath, "**/*.ts", {
+    auditRoot: runtimeConfig.auditRoot,
+    engineRoot: runtimeConfig.engineRoot,
+  });
   const violations: Array<{
     file: string;
     line: number;

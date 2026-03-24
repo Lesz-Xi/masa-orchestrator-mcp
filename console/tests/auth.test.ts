@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomBytes, scryptSync } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
@@ -20,7 +20,9 @@ import {
 
 describe("console auth", () => {
   it("verifies scrypt hashes and session round-trips", () => {
-    const passwordHash = `sha256:${createHash("sha256").update("operator-pass").digest("hex")}`;
+    const salt = randomBytes(16);
+    const derived = scryptSync("operator-pass", salt, 64);
+    const passwordHash = `scrypt:${salt.toString("hex")}:${derived.toString("hex")}`;
 
     expect(
       verifyPassword("operator-pass", passwordHash)

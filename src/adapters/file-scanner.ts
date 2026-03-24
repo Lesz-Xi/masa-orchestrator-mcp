@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+// @ts-ignore
 import { glob } from "glob";
 
 import type { FileClass, MatchContext, ScanMatch } from "../types.js";
@@ -65,7 +66,31 @@ function advanceCommentState(line: string, previous: CommentState): CommentState
   return state;
 }
 
-export async function collectFiles(targetPath: string, globPattern = "**/*.ts"): Promise<string[]> {
+export function assertSandboxedPath(
+  targetPath: string,
+  auditRoot: string,
+  engineRoot: string
+): void {
+  const resolved = path.resolve(targetPath);
+  const resolvedAudit = path.resolve(auditRoot);
+  const resolvedEngine = path.resolve(engineRoot);
+
+  const inAudit =
+    resolved === resolvedAudit || resolved.startsWith(resolvedAudit + path.sep);
+  const inEngine =
+    resolved === resolvedEngine || resolved.startsWith(resolvedEngine + path.sep);
+
+  if (!inAudit && !inEngine) {
+    throw new Error(
+      `Path '${resolved}' is outside the sandboxed AUDIT_ROOT ('${resolvedAudit}') and ENGINE_ROOT ('${resolvedEngine}'). Access denied.`
+    );
+  }
+}
+
+export async function collectFiles(targetPath: string, globPattern = "**/*.ts", sandbox?: { auditRoot: string; engineRoot: string }): Promise<string[]> {
+  if (sandbox) {
+    assertSandboxedPath(targetPath, sandbox.auditRoot, sandbox.engineRoot);
+  }
   const stats = await fs.promises.stat(targetPath);
 
   if (stats.isFile()) {
@@ -79,7 +104,7 @@ export async function collectFiles(targetPath: string, globPattern = "**/*.ts"):
     ignore: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
   });
 
-  return files.sort((left, right) => left.localeCompare(right));
+  return files.sort((left: string, right: string) => left.localeCompare(right));
 }
 
 export async function scanFileForPattern(input: {

@@ -25,7 +25,10 @@ export async function auditClaims(
   input: z.infer<typeof auditClaimsSchema>,
   runtimeConfig: RuntimeConfig
 ) {
-  const files = await collectFiles(input.path, "**/*.{ts,tsx,md}");
+  const files = await collectFiles(input.path, "**/*.{ts,tsx,md}", {
+    auditRoot: runtimeConfig.auditRoot,
+    engineRoot: runtimeConfig.engineRoot,
+  });
   const overclaims: ClaimFinding[] = [];
   const trackACore = new Set<string>();
   const trackBSupport = new Set<string>();

@@ -15,7 +15,10 @@ export async function checkNotationCompliance(
   runtimeConfig: RuntimeConfig,
   rules: NotationRule[]
 ) {
-  const files = await collectFiles(input.path, input.glob);
+  const files = await collectFiles(input.path, input.glob, {
+    auditRoot: runtimeConfig.auditRoot,
+    engineRoot: runtimeConfig.engineRoot,
+  });
   const matchesByRule: Array<{ rule: NotationRule; matches: Awaited<ReturnType<typeof scanFileForPattern>> }> = [];
 
   for (const rule of rules) {

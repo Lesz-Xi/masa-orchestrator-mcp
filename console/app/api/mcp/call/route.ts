@@ -6,7 +6,12 @@ import { TOOL_CATALOG_BY_NAME } from "../../../../src/lib/catalog";
 import { callRemoteTool } from "../../../../src/lib/mcp-client";
 
 function requiresConfirmation(toolName: string, toolArgs: Record<string, unknown>): boolean {
-  return toolName === "delegation_chain_state" && toolArgs.action === "update";
+  const entry = TOOL_CATALOG_BY_NAME[toolName];
+  if (!entry?.mutatesState) return false;
+  // Allow read-only actions on otherwise-mutable tools
+  const action = toolArgs.action;
+  if (typeof action === "string" && ["get", "report"].includes(action)) return false;
+  return true;
 }
 
 export async function POST(request: Request) {
@@ -16,6 +21,11 @@ export async function POST(request: Request) {
 
   if (!session) {
     return NextResponse.json({ error: { message: "Unauthorized." } }, { status: 401 });
+  }
+
+  const csrfHeader = request.headers.get("x-console-request");
+  if (csrfHeader !== "1") {
+    return NextResponse.json({ error: { message: "CSRF validation failed." } }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => null)) as

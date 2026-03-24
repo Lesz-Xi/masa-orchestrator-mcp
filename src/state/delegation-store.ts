@@ -22,6 +22,8 @@ const allowedTransitions: Record<string, string[]> = {
   blocked: ["in_review", "approved", "in_progress", "rework", "rejected"],
 };
 
+const KNOWN_STATUSES = new Set(Object.keys(allowedTransitions));
+
 function initialState(): DelegationStateFile {
   return {
     version: 2,
@@ -83,6 +85,12 @@ export class DelegationStore {
     const timestamp = new Date().toISOString();
 
     if (!existing) {
+      if (!KNOWN_STATUSES.has(input.newStatus)) {
+        throw new Error(
+          `Unknown initial status '${input.newStatus}'. Valid statuses: ${[...KNOWN_STATUSES].sort().join(", ")}.`
+        );
+      }
+
       const created: DelegationTask = {
         taskId: input.taskId,
         taskType: input.taskType || "unspecified",

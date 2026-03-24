@@ -80,9 +80,10 @@ export function verifyPassword(password: string, passwordHash: string): boolean 
   }
 
   if (passwordHash.startsWith("sha256:")) {
-    const expected = Buffer.from(passwordHash.slice("sha256:".length), "hex");
-    const actual = crypto.createHash("sha256").update(password).digest();
-    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+    throw new Error(
+      "ORCHESTRATOR_CONSOLE_PASSWORD_HASH uses sha256: which is insecure for passwords. " +
+        "Regenerate using the scrypt: format documented in DEPLOYMENT.md."
+    );
   }
 
   return false;

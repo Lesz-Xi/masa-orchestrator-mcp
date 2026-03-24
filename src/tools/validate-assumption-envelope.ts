@@ -15,7 +15,10 @@ export async function validateAssumptionEnvelope(
   input: z.infer<typeof validateEnvelopeSchema>,
   runtimeConfig: RuntimeConfig
 ) {
-  const files = await collectFiles(input.path, "**/*.ts");
+  const files = await collectFiles(input.path, "**/*.ts", {
+    auditRoot: runtimeConfig.auditRoot,
+    engineRoot: runtimeConfig.engineRoot,
+  });
   const violations: Array<{
     file: string;
     line: number;

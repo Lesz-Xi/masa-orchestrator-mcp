@@ -219,6 +219,21 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
       { name: "path", label: "Path", kind: "text", required: true, placeholder: "/abs/path/to/engine-core" },
     ],
   },
+  {
+    name: "check_frontend_compliance",
+    displayName: "Check Frontend Compliance",
+    category: "compliance",
+    riskLevel: "medium",
+    mutatesState: false,
+    summary: "Scan React components for structural UI robustness, dark mode parity, and Awwwards aesthetic enforcement.",
+    recommendedInputs: [
+      "Path to the crucible components or app directory",
+    ],
+    fields: [
+      { name: "targetPath", label: "Target Path", kind: "text", required: true, placeholder: "/abs/path/to/crucible/src" },
+      { name: "glob", label: "Glob Filter", kind: "text", placeholder: "**/*.tsx" },
+    ],
+  },
 ] as const;
 
 export const TOOL_CATALOG_BY_NAME = Object.fromEntries(

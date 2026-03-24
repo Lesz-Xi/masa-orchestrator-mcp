@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { z } from "zod";
 
 import { runBenchmarks } from "../adapters/benchmark-runner.js";
@@ -6,6 +8,7 @@ import { DelegationStore } from "../state/delegation-store.js";
 import { readL4Blockers } from "../utils/l4-blockers.js";
 import { checkNotationCompliance } from "./check-notation-compliance.js";
 import { llmIndependenceCheck } from "./llm-independence-check.js";
+import { checkFrontendCompliance } from "./check-frontend-compliance.js";
 
 export const benchmarkStatusSchema = z.object({
   testPath: z.string().min(1),
@@ -44,9 +47,22 @@ export async function benchmarkStatus(
       benchmarks,
       llmIndependence: "unchecked",
       notationCompliance: "unchecked",
+      frontendCompliance: "unchecked",
       honestCapabilityStatement: "No computation implemented. The engine does not yet exist.",
       consolidationEligible: false,
     };
+  }
+
+  // Sandbox: testPath must match the server-configured benchmark path
+  if (dependencies.runtimeConfig.benchmarkTestPath) {
+    const resolvedInput = path.resolve(input.testPath);
+    const resolvedConfigured = path.resolve(dependencies.runtimeConfig.benchmarkTestPath);
+    if (resolvedInput !== resolvedConfigured) {
+      throw new Error(
+        `testPath must match the configured BENCHMARK_TEST_PATH. ` +
+          `Expected '${resolvedConfigured}', got '${resolvedInput}'.`
+      );
+    }
   }
 
   const llm = await llmIndependenceCheck(
@@ -65,6 +81,12 @@ export async function benchmarkStatus(
     dependencies.runtimeConfig,
     dependencies.notationRules
   );
+
+  const frontend = await checkFrontendCompliance({
+    targetPath: dependencies.runtimeConfig.engineRoot,
+    glob: "**/*.tsx",
+  });
+
   const delegationState = await dependencies.store.read();
   const l4Blockers = await readL4Blockers(dependencies.runtimeConfig.workspaceRoot);
   const blockers = Array.from(new Set([...delegationState.blockers, ...l4Blockers]));
@@ -77,6 +99,7 @@ export async function benchmarkStatus(
     benchmarkMap: dependencies.benchmarkMap,
     llmIndependence: llm.independent ? "verified" : "violation",
     notationCompliance: notation.compliant ? "compliant" : "violation",
+    frontendCompliance: frontend.compliant ? "passing" : "failing",
     blockers,
   });
 

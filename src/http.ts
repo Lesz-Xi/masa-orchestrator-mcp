@@ -353,6 +353,16 @@ async function main(): Promise<void> {
             throw new HttpError(401, "Unauthorized.", "unauthorized");
           }
 
+          const activityCallerId = getCallerId(req);
+          const activityRateLimit = rateLimiter.take(activityCallerId);
+          if (!activityRateLimit.allowed) {
+            res.setHeader(
+              "retry-after",
+              String(Math.ceil((activityRateLimit.resetAt - Date.now()) / 1000))
+            );
+            throw new HttpError(429, "Rate limit exceeded.", "rate_limited");
+          }
+
           sendJson(res, 200, {
             activity: await dependencies.store.listRecentActivity(
               Number(requestUrl.searchParams.get("limit") || "25")

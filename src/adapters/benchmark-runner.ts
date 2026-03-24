@@ -55,6 +55,7 @@ export async function runBenchmarks(input: {
   benchmarkMap: BenchmarkMapConfig;
   llmIndependence: "verified" | "violation" | "unchecked";
   notationCompliance: "compliant" | "violation" | "unchecked";
+  frontendCompliance?: "passing" | "failing" | "unchecked";
   blockers: string[];
 }): Promise<BenchmarkStatusSnapshot> {
   const packageRoot = findPackageRoot(input.runtimeConfig.engineRoot);
@@ -62,13 +63,26 @@ export async function runBenchmarks(input: {
     input.runtimeConfig.benchmarkTestPath ||
     path.join(packageRoot, input.benchmarkMap.testFile);
 
+  const safeEnv: NodeJS.ProcessEnv = {
+    PATH: process.env.PATH,
+    HOME: process.env.HOME,
+    NODE_ENV: process.env.NODE_ENV,
+    TMPDIR: process.env.TMPDIR,
+    TMP: process.env.TMP,
+    TEMP: process.env.TEMP,
+    // npm/node runtime vars needed for npx/vitest
+    npm_execpath: process.env.npm_execpath,
+    npm_config_prefix: process.env.npm_config_prefix,
+    npm_config_cache: process.env.npm_config_cache,
+  };
+
   const executionResult = await execFileAsync(
     "npx",
     ["vitest", "run", benchmarkFile, "--reporter=verbose"],
     {
       cwd: packageRoot,
       maxBuffer: 10 * 1024 * 1024,
-      env: process.env,
+      env: safeEnv,
     }
   );
 
@@ -104,6 +118,7 @@ export async function runBenchmarks(input: {
     benchmarks,
     llmIndependence: input.llmIndependence,
     notationCompliance: input.notationCompliance,
+    frontendCompliance: input.frontendCompliance ?? "unchecked",
     honestCapabilityStatement,
     consolidationEligible:
       passing === 6 &&

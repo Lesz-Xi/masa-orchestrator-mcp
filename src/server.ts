@@ -14,6 +14,7 @@ import { llmIndependenceCheck, llmIndependenceSchema } from "./tools/llm-indepen
 import { TOOL_NAMES } from "./tool-names.js";
 import { validateAssumptionEnvelope, validateEnvelopeSchema } from "./tools/validate-assumption-envelope.js";
 import { validateTaskHeader, validateTaskHeaderSchema } from "./tools/validate-task-header.js";
+import { checkFrontendCompliance, checkFrontendComplianceSchema } from "./tools/check-frontend-compliance.js";
 import type { BenchmarkMapConfig, NotationRule, RuntimeConfig } from "./types.js";
 
 type ToolResult = Record<string, unknown>;
@@ -197,6 +198,20 @@ export function createServerFromDependencies({
       },
       execute: async (input) =>
         validateAssumptionEnvelope(validateEnvelopeSchema.parse(input), runtimeConfig) as Promise<ToolResult>,
+    },
+    {
+      name: TOOL_NAMES.checkFrontendCompliance,
+      description: "Scan frontend components for layout compliance and aesthetic governance.",
+      inputSchema: {
+        type: "object",
+        required: ["targetPath"],
+        properties: {
+          targetPath: { type: "string" },
+          glob: { type: "string" },
+        },
+      },
+      execute: async (input) =>
+        checkFrontendCompliance(checkFrontendComplianceSchema.parse(input)) as Promise<ToolResult>,
     },
   ];
 

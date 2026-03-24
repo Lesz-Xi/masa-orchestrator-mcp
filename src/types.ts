@@ -127,6 +127,7 @@ export interface BenchmarkStatusSnapshot {
   benchmarks: Record<BenchmarkDefinition["id"], BenchmarkResult>;
   llmIndependence: "verified" | "violation" | "unchecked";
   notationCompliance: "compliant" | "violation" | "unchecked";
+  frontendCompliance?: "passing" | "failing" | "unchecked";
   honestCapabilityStatement: string;
   consolidationEligible: boolean;
   updatedAt: string;
