@@ -218,6 +218,7 @@ function summarizeBenchmark(benchmark: Record<string, unknown> | undefined) {
     : [];
 
   return {
+    hasCachedRun: benchmarkTiles.length > 0 || typeof benchmark?.updatedAt === "string",
     passing: asNumber(benchmark?.passing) ?? 0,
     failing: asNumber(benchmark?.failing) ?? 0,
     notImplemented: asNumber(benchmark?.notImplemented) ?? 0,
@@ -609,16 +610,20 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
   function renderDashboard() {
     const compliancePosture = complianceSummary.findings;
     const recentActivity = activity.slice(0, 4);
+    const benchmarkHeadline = benchmarkSummary.hasCachedRun ? String(benchmarkSummary.passing) : "—";
+    const benchmarkSubtle = benchmarkSummary.hasCachedRun
+      ? `${benchmarkSummary.failing} failing · ${benchmarkSummary.notImplemented} pending`
+      : "No cached benchmark run";
 
     return (
       <section className="workspace-stack">
         <section className="hero-panel">
           <div className="hero-copy">
             <div className="meta-chip">MASA / authenticated operator surface</div>
-            <h2>System truth, delegation flow, and compliance posture in one screen.</h2>
+            <h2>System posture, delegation flow, and review truth in one place.</h2>
             <p>
-              The shell now leads with verified benchmark posture, active delegation pressure, and recent
-              authenticated MCP traffic instead of raw payload blocks.
+              A compressed operator surface for benchmark state, delegation pressure, compliance posture,
+              and authenticated MCP traffic.
             </p>
           </div>
           <div className="hero-signal">
@@ -643,10 +648,8 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
           </article>
           <article className="metric-card">
             <span className="metric-label">Benchmark state</span>
-            <strong>{benchmarkSummary.passing}</strong>
-            <span className="metric-subtle">
-              {benchmarkSummary.failing} failing · {benchmarkSummary.notImplemented} pending
-            </span>
+            <strong>{benchmarkHeadline}</strong>
+            <span className="metric-subtle">{benchmarkSubtle}</span>
           </article>
           <article className="metric-card">
             <span className="metric-label">Delegation state</span>
@@ -783,7 +786,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
             <header className="panel-heading">
               <div>
                 <span className="eyebrow">Recent activity</span>
-                <h3>Authenticated operator traffic</h3>
+                <h3>Authenticated MCP traffic</h3>
               </div>
             </header>
             {recentActivity.length === 0 ? (
@@ -1299,7 +1302,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
           <div className="meta-chip">MASA / workbench</div>
           <div>
             <h1>Operator Console</h1>
-            <p>Dense review surface for benchmark truth, delegation flow, and guarded MCP execution.</p>
+            <p>Minimal review surface for benchmark truth, delegation flow, and guarded MCP execution.</p>
           </div>
         </div>
 
@@ -1363,7 +1366,7 @@ export function OperatorConsole({ operatorId }: { operatorId: string }) {
           <header className="panel-heading">
             <div>
               <span className="eyebrow">Recent activity</span>
-              <h3>Authenticated MCP traffic</h3>
+                <h3>Authenticated MCP traffic</h3>
             </div>
           </header>
           <div className="timeline-list">

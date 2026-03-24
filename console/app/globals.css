@@ -1,10 +1,10 @@
 :root {
   color-scheme: dark;
-  --bg: #090909;
-  --bg-layer: rgba(16, 15, 14, 0.9);
-  --bg-elevated: rgba(23, 20, 18, 0.96);
-  --panel: rgba(25, 22, 20, 0.92);
-  --panel-alt: rgba(20, 18, 16, 0.88);
+  --bg: #080808;
+  --bg-layer: rgba(14, 13, 12, 0.92);
+  --bg-elevated: rgba(20, 18, 16, 0.96);
+  --panel: rgba(22, 19, 17, 0.9);
+  --panel-alt: rgba(16, 14, 13, 0.9);
   --panel-border: rgba(244, 237, 225, 0.08);
   --panel-border-strong: rgba(244, 237, 225, 0.14);
   --text: #f6efe4;
@@ -17,11 +17,11 @@
   --warning: #d9a15b;
   --danger: #d96d63;
   --active: #7ba9d0;
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-  --radius-xl: 30px;
-  --radius-lg: 22px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
+  --shadow: 0 20px 56px rgba(0, 0, 0, 0.28);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
   --sans: "Inter", "Geist Sans", ui-sans-serif, system-ui, sans-serif;
   --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", serif;
   --mono: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
@@ -45,6 +45,7 @@ body {
 
 body {
   overflow-x: hidden;
+  letter-spacing: -0.01em;
 }
 
 button,
@@ -264,52 +265,53 @@ textarea {
 .console-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 320px;
-  gap: 18px;
-  padding: 18px;
+  grid-template-columns: 188px minmax(0, 1fr) 286px;
+  gap: 14px;
+  padding: 14px;
 }
 
 .console-nav,
 .console-rail {
-  min-height: calc(100vh - 36px);
+  min-height: calc(100vh - 28px);
 }
 
 .console-nav {
   border-radius: var(--radius-xl);
-  padding: 18px;
+  padding: 14px;
   display: grid;
-  gap: 18px;
-  background: rgba(13, 12, 11, 0.84);
+  gap: 14px;
+  background: rgba(12, 11, 10, 0.9);
 }
 
 .compact-nav {
   position: sticky;
-  top: 18px;
+  top: 14px;
   align-self: start;
 }
 
 .nav-brand {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .nav-brand h1 {
   margin: 0;
   font-family: var(--serif);
-  font-size: 2.35rem;
-  line-height: 0.95;
+  font-size: 1.8rem;
+  line-height: 0.9;
 }
 
 .nav-brand p {
   margin: 0;
   color: var(--muted);
-  line-height: 1.55;
+  line-height: 1.5;
+  font-size: 14px;
 }
 
 .nav-identity {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -319,7 +321,7 @@ textarea {
   display: block;
   margin-top: 4px;
   color: var(--text-strong);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .nav-stack {
@@ -328,23 +330,23 @@ textarea {
 }
 
 .nav-link {
-  padding: 12px 14px;
+  padding: 10px 12px;
   text-align: left;
   background: transparent;
   color: var(--muted);
   border-color: rgba(255, 255, 255, 0.06);
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .nav-link span {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .nav-link small {
   color: var(--meta);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .nav-link.active {
@@ -355,7 +357,7 @@ textarea {
 
 .console-workspace {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   min-width: 0;
 }
 
@@ -363,7 +365,7 @@ textarea {
 .panel-grid,
 .dashboard-grid {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .dashboard-grid {
@@ -375,28 +377,37 @@ textarea {
 .hero-panel,
 .utility-strip {
   border-radius: var(--radius-xl);
-  padding: 20px;
+  padding: 16px;
 }
 
 .hero-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.8fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.72fr);
+  gap: 14px;
   background:
-    radial-gradient(circle at top right, rgba(217, 116, 71, 0.12), transparent 32%),
+    radial-gradient(circle at top right, rgba(217, 116, 71, 0.08), transparent 34%),
     var(--panel);
 }
 
 .hero-copy {
   display: grid;
-  gap: 14px;
+  gap: 10px;
+}
+
+.hero-copy h2 {
+  font-size: clamp(2.5rem, 4.2vw, 4.3rem);
+  max-width: 11ch;
+}
+
+.hero-copy p {
+  max-width: 56ch;
 }
 
 .hero-signal {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
-  padding: 16px;
+  padding: 14px;
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -421,9 +432,9 @@ textarea {
 
 .metric-card {
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 14px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   background: var(--panel-alt);
 }
 
@@ -432,15 +443,15 @@ textarea {
 }
 
 .metric-card strong {
-  font-size: 1.9rem;
+  font-size: 1.55rem;
   line-height: 1;
   color: var(--text-strong);
 }
 
 .metric-subtle {
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .section-heading,
@@ -461,7 +472,7 @@ textarea {
 
 .panel-card h3,
 .rail-card h3 {
-  font-size: 1.4rem;
+  font-size: 1.18rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -526,7 +537,7 @@ textarea {
 .timeline-item,
 .history-item {
   border-radius: var(--radius-md);
-  padding: 14px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -587,11 +598,11 @@ textarea {
 .timeline-list,
 .signal-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .activity-row {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -693,12 +704,12 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   position: sticky;
-  top: 18px;
+  top: 14px;
   z-index: 10;
-  padding: 14px 18px;
-  background: rgba(18, 16, 15, 0.95);
+  padding: 12px 14px;
+  background: rgba(18, 16, 15, 0.92);
 }
 
 .utility-cluster {
@@ -710,18 +721,37 @@ textarea {
 
 .utility-meta {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .console-rail {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .sticky-rail {
   position: sticky;
-  top: 18px;
+  top: 14px;
   align-self: start;
+}
+
+.rail-card {
+  padding: 14px;
+}
+
+.timeline-item {
+  padding: 10px 12px;
+}
+
+.timeline-item strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.compact-timeline-item p {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .compact-timeline-item p {
@@ -754,7 +784,7 @@ textarea {
 
 @media (max-width: 1400px) {
   .console-shell {
-    grid-template-columns: 210px minmax(0, 1fr) 300px;
+    grid-template-columns: 182px minmax(0, 1fr) 268px;
   }
 
   .compact-metric-grid,
@@ -765,7 +795,7 @@ textarea {
 
 @media (max-width: 1180px) {
   .console-shell {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 192px minmax(0, 1fr);
   }
 
   .console-rail {

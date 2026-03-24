@@ -106,9 +106,9 @@ describe("OperatorConsole", () => {
     render(<OperatorConsole operatorId="ops-chief" />);
 
     expect(await screen.findByText("Operator Console")).toBeTruthy();
-    expect(await screen.findByText("System truth, delegation flow, and compliance posture in one screen.")).toBeTruthy();
+    expect(await screen.findByText("System posture, delegation flow, and review truth in one place.")).toBeTruthy();
     expect(await screen.findByText("B1-B6 cached posture")).toBeTruthy();
-    expect(await screen.findByText("Authenticated operator traffic")).toBeTruthy();
+    expect((await screen.findAllByText("Authenticated MCP traffic")).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("Tool Runner"));
     expect(await screen.findByText("Validate Task Header")).toBeTruthy();
     expect(await screen.findByText("Result viewer")).toBeTruthy();
