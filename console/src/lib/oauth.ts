@@ -53,12 +53,102 @@ export function buildAuthorizationServerMetadata(origin: string) {
     issuer: origin,
     authorization_endpoint: `${origin}/api/oauth/authorize`,
     token_endpoint: `${origin}/api/oauth/token`,
+    registration_endpoint: `${origin}/api/oauth/register`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
     scopes_supported: ["mcp"],
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  RFC 7591 - Dynamic Client Registration (minimal, stateless)       */
+/* ------------------------------------------------------------------ */
+
+export interface ClientRegistrationRequest {
+  redirect_uris: string[];
+  client_name?: string;
+  grant_types?: string[];
+  response_types?: string[];
+  token_endpoint_auth_method?: string;
+  scope?: string;
+}
+
+export interface ClientRegistrationResponse {
+  client_id: string;
+  client_name?: string;
+  redirect_uris: string[];
+  grant_types: string[];
+  response_types: string[];
+  token_endpoint_auth_method: string;
+  scope: string;
+}
+
+/**
+ * Deterministic client_id derived from the sorted redirect URIs.
+ * This keeps registration stateless and idempotent — re-registering
+ * with the same redirect_uris always returns the same client_id.
+ */
+function deriveClientId(redirectUris: string[]): string {
+  const canonical = [...redirectUris].sort().join("\n");
+  const hash = crypto.createHash("sha256").update(canonical).digest("hex").slice(0, 16);
+  return `mcpclient-${hash}`;
+}
+
+export function registerClient(body: unknown): {
+  response?: ClientRegistrationResponse;
+  error?: { error: string; error_description: string };
+} {
+  if (!body || typeof body !== "object") {
+    return { error: { error: "invalid_client_metadata", error_description: "Request body must be a JSON object." } };
+  }
+
+  const req = body as Record<string, unknown>;
+
+  // redirect_uris is required per RFC 7591
+  if (!Array.isArray(req.redirect_uris) || req.redirect_uris.length === 0) {
+    return { error: { error: "invalid_client_metadata", error_description: "redirect_uris must be a non-empty array." } };
+  }
+
+  const redirectUris: string[] = [];
+  for (const uri of req.redirect_uris) {
+    if (typeof uri !== "string") {
+      return { error: { error: "invalid_client_metadata", error_description: "Each redirect_uri must be a string." } };
+    }
+    if (!isAllowedOAuthRedirectUri(uri)) {
+      return { error: { error: "invalid_redirect_uri", error_description: `Redirect URI not allowed: ${uri}` } };
+    }
+    redirectUris.push(uri);
+  }
+
+  // Validate grant_types if provided — we only support authorization_code
+  const grantTypes = Array.isArray(req.grant_types) ? req.grant_types as string[] : ["authorization_code"];
+  if (!grantTypes.includes("authorization_code")) {
+    return { error: { error: "invalid_client_metadata", error_description: "Only authorization_code grant type is supported." } };
+  }
+
+  // Validate token_endpoint_auth_method — we only support "none" (public client)
+  const authMethod = typeof req.token_endpoint_auth_method === "string"
+    ? req.token_endpoint_auth_method
+    : "none";
+  if (authMethod !== "none") {
+    return { error: { error: "invalid_client_metadata", error_description: "Only token_endpoint_auth_method \"none\" is supported." } };
+  }
+
+  const clientName = typeof req.client_name === "string" ? req.client_name : undefined;
+
+  const response: ClientRegistrationResponse = {
+    client_id: deriveClientId(redirectUris),
+    ...(clientName ? { client_name: clientName } : {}),
+    redirect_uris: redirectUris,
+    grant_types: ["authorization_code"],
+    response_types: ["code"],
+    token_endpoint_auth_method: "none",
+    scope: "mcp",
+  };
+
+  return { response };
 }
 
 export function issueAuthorizationCode(record: Omit<AuthorizationCodeRecord, "issuedAt">): string {

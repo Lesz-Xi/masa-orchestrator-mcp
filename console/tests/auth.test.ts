@@ -10,10 +10,12 @@ import {
   verifyPassword,
 } from "../src/lib/auth.js";
 import {
+  buildAuthorizationServerMetadata,
   buildPkceChallenge,
   consumeAuthorizationCode,
   isAllowedOAuthRedirectUri,
   issueAuthorizationCode,
+  registerClient,
 } from "../src/lib/oauth.js";
 
 describe("console auth", () => {
@@ -62,5 +64,69 @@ describe("console auth", () => {
     const record = consumeAuthorizationCode(code);
     expect(record?.operatorId).toBe("ops-chief");
     expect(consumeAuthorizationCode(code)).toBeNull();
+  });
+
+  it("auth server metadata includes registration_endpoint", () => {
+    const meta = buildAuthorizationServerMetadata("https://orchestrator.wuweism.com");
+    expect(meta.registration_endpoint).toBe("https://orchestrator.wuweism.com/api/oauth/register");
+    expect(meta.token_endpoint_auth_methods_supported).toContain("none");
+    expect(meta.code_challenge_methods_supported).toContain("S256");
+  });
+
+  it("registers a public PKCE client via registerClient", () => {
+    const result = registerClient({
+      redirect_uris: ["https://claude.ai/oauth/callback"],
+      client_name: "Anthropic Connector",
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(result.response).toBeDefined();
+    expect(result.response!.client_id).toMatch(/^mcpclient-[0-9a-f]{16}$/);
+    expect(result.response!.client_name).toBe("Anthropic Connector");
+    expect(result.response!.redirect_uris).toEqual(["https://claude.ai/oauth/callback"]);
+    expect(result.response!.grant_types).toEqual(["authorization_code"]);
+    expect(result.response!.response_types).toEqual(["code"]);
+    expect(result.response!.token_endpoint_auth_method).toBe("none");
+    expect(result.response!.scope).toBe("mcp");
+  });
+
+  it("registerClient is idempotent for the same redirect_uris", () => {
+    const r1 = registerClient({ redirect_uris: ["https://claude.ai/oauth/callback"] });
+    const r2 = registerClient({ redirect_uris: ["https://claude.ai/oauth/callback"] });
+    expect(r1.response!.client_id).toBe(r2.response!.client_id);
+  });
+
+  it("registerClient rejects missing redirect_uris", () => {
+    const result = registerClient({ redirect_uris: [] });
+    expect(result.error).toBeDefined();
+    expect(result.error!.error).toBe("invalid_client_metadata");
+  });
+
+  it("registerClient rejects disallowed redirect_uris", () => {
+    const result = registerClient({ redirect_uris: ["http://evil.example.com/callback"] });
+    expect(result.error).toBeDefined();
+    expect(result.error!.error).toBe("invalid_redirect_uri");
+  });
+
+  it("authorize/token flow works with a dynamically registered client", () => {
+    const reg = registerClient({ redirect_uris: ["https://claude.ai/oauth/callback"] });
+    const clientId = reg.response!.client_id;
+
+    const code = issueAuthorizationCode({
+      clientId,
+      redirectUri: "https://claude.ai/oauth/callback",
+      codeChallenge: buildPkceChallenge("dynamic-verifier"),
+      codeChallengeMethod: "S256",
+      operatorId: "ops-chief",
+      resource: "https://mcp.wuweism.com/mcp",
+    });
+
+    const record = consumeAuthorizationCode(code);
+    expect(record).toBeDefined();
+    expect(record!.clientId).toBe(clientId);
+    expect(record!.operatorId).toBe("ops-chief");
+
+    // Verify PKCE
+    expect(record!.codeChallenge).toBe(buildPkceChallenge("dynamic-verifier"));
   });
 });
