@@ -105,6 +105,12 @@ npm run build
 npm test
 ```
 
+## Connecting Claude
+
+To connect Claude as a custom MCP connector, see:
+
+[docs/CLAUDE-CONNECTOR-SETUP.md](docs/CLAUDE-CONNECTOR-SETUP.md)
+
 ## Package Layout
 
 - `src/` server, tools, adapters, validation

@@ -85,6 +85,16 @@ Example process-based MCP client config:
 
 ## Remote Setup For Claude And Gemini
 
+### Claude Custom Connector (production)
+
+The live deployment is available at `https://mcp.wuweism.com/mcp`. Claude connects via a custom connector using OAuth 2.0 PKCE with Dynamic Client Registration — no manual credentials needed.
+
+For full setup instructions, verification commands, and troubleshooting see:
+
+[CLAUDE-CONNECTOR-SETUP.md](CLAUDE-CONNECTOR-SETUP.md)
+
+### Local HTTP mode
+
 Start the server in HTTP mode:
 
 ```bash

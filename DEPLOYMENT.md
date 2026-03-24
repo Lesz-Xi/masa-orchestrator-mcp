@@ -231,6 +231,10 @@ If you prefer a single-host path layout instead:
 
 But the subdomain split is cleaner and easier to secure.
 
+Once deployed, to connect Claude as a custom MCP connector see:
+
+[docs/CLAUDE-CONNECTOR-SETUP.md](docs/CLAUDE-CONNECTOR-SETUP.md)
+
 ## Single-Instance Warning
 
 The delegation state file uses atomic rename writes, but the server is currently intended for:
