@@ -5,7 +5,7 @@ import { OperatorConsole } from "../src/components/operator-console.js";
 
 describe("OperatorConsole", () => {
   it("renders summary-first dashboard and tool runner", async () => {
-    global.fetch = async (input: RequestInfo | URL) => {
+    global.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
       if (url.endsWith("/api/mcp/tools")) {
@@ -60,9 +60,12 @@ describe("OperatorConsole", () => {
       }
 
       if (url.endsWith("/api/mcp/call")) {
+        const parsed = init?.body ? JSON.parse(String(init.body)) : {};
+        const toolName = parsed.toolName as string | undefined;
+
         return new Response(
           JSON.stringify({
-            structuredContent: url.includes("benchmark_status")
+            structuredContent: toolName === "benchmark_status"
               ? {
                   passing: 6,
                   failing: 0,
@@ -76,7 +79,7 @@ describe("OperatorConsole", () => {
                   consolidationEligible: false,
                   updatedAt: "2026-03-24T01:00:00.000Z",
                 }
-              : url.includes("delegation_chain_state")
+              : toolName === "delegation_chain_state"
                 ? {
                     tasks: [
                       {
@@ -106,11 +109,12 @@ describe("OperatorConsole", () => {
     render(<OperatorConsole operatorId="ops-chief" />);
 
     expect(await screen.findByText("Operator Console")).toBeTruthy();
-    expect(await screen.findByText("System posture, delegation flow, and review truth in one place.")).toBeTruthy();
+    expect(await screen.findByText("System truth, delegation pressure, and review posture in one screen.")).toBeTruthy();
     expect(await screen.findByText("B1-B6 cached posture")).toBeTruthy();
     expect((await screen.findAllByText("Authenticated MCP traffic")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Provenance defaults")).toBeTruthy();
     fireEvent.click(screen.getByText("Tool Runner"));
-    expect(await screen.findByText("Validate Task Header")).toBeTruthy();
-    expect(await screen.findByText("Result viewer")).toBeTruthy();
+    expect(await screen.findByText("Operator-safe form surface")).toBeTruthy();
+    expect(await screen.findByText("Inspect raw payload")).toBeTruthy();
   });
 });
