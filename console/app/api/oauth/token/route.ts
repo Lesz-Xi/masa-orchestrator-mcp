@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { loadConsoleEnv } from "../../../../src/lib/auth";
+import { getPublicOrigin, loadConsoleEnv } from "../../../../src/lib/auth";
 import {
   buildPkceChallenge,
   consumeAuthorizationCode,
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   const { accessToken, expiresIn } = issueAuthorizationCodeAccessToken({
     apiToken: env.apiToken,
-    authServerOrigin: new URL(request.url).origin,
+    authServerOrigin: getPublicOrigin(request),
     clientId,
     operatorId: authorizationCode.operatorId,
     resource: authorizationCode.resource,

@@ -15,6 +15,16 @@ export interface OperatorSession {
   issuedAt: string;
 }
 
+export function getPublicOrigin(request: Request): string {
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const host = request.headers.get("host");
+  if (forwardedProto && host) {
+    const proto = forwardedProto.split(",")[0]!.trim();
+    return `${proto}://${host}`;
+  }
+  return new URL(request.url).origin;
+}
+
 export function loadConsoleEnv(): ConsoleEnv {
   const mcpUrl = process.env.ORCHESTRATOR_MCP_URL;
   const apiToken = process.env.ORCHESTRATOR_API_TOKEN;

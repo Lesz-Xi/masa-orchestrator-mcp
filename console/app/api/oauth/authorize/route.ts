@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { SESSION_COOKIE_NAME, loadConsoleEnv, normalizeReturnTo, parseSessionToken } from "../../../../src/lib/auth";
+import { SESSION_COOKIE_NAME, getPublicOrigin, loadConsoleEnv, normalizeReturnTo, parseSessionToken } from "../../../../src/lib/auth";
 import {
   buildAuthorizeErrorRedirect,
   isAllowedOAuthRedirectUri,
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   if (!session) {
     const returnTo = normalizeReturnTo(`${requestUrl.pathname}${requestUrl.search}`) || "/api/oauth/authorize";
-    return NextResponse.redirect(new URL(`/login?returnTo=${encodeURIComponent(returnTo)}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/login?returnTo=${encodeURIComponent(returnTo)}`, getPublicOrigin(request)));
   }
 
   const code = issueAuthorizationCode({
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   if (state) {
     location.searchParams.set("state", state);
   }
-  location.searchParams.set("iss", requestUrl.origin);
+  location.searchParams.set("iss", getPublicOrigin(request));
 
   return NextResponse.redirect(location);
 }
