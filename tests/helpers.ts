@@ -23,5 +23,11 @@ export function runtimeConfigFor(engineRoot: string, auditRoot: string): Runtime
     port: 3100,
     path: "/mcp",
     workspaceRoot: path.dirname(auditRoot),
+    authMode: "none",
+    allowedOrigins: [],
+    authorizationServerOrigin: undefined,
+    requestBodyLimitBytes: 1_048_576,
+    rateLimitWindowMs: 60_000,
+    rateLimitMaxRequests: 60,
   };
 }

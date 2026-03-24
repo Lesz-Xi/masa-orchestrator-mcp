@@ -97,6 +97,7 @@ export function loadRuntimeConfig(importMetaUrl: string): RuntimeConfig {
     authMode: parsed.MCP_TRANSPORT === "http" ? "bearer" : "none",
     apiToken: parsed.ORCHESTRATOR_API_TOKEN,
     allowedOrigins,
+    authorizationServerOrigin: allowedOrigins[0],
     requestBodyLimitBytes: parsed.ORCHESTRATOR_MAX_BODY_BYTES,
     rateLimitWindowMs: parsed.ORCHESTRATOR_RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: parsed.ORCHESTRATOR_RATE_LIMIT_MAX,

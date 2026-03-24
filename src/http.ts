@@ -8,13 +8,68 @@ import {
   FixedWindowRateLimiter,
   HttpError,
   assertAllowedOrigin,
-  getCallerId,
   getClientIp,
   readJsonBody,
   redactSensitiveText,
   safeBearerMatch,
 } from "./http/security.js";
+import {
+  buildProtectedResourceMetadata,
+  buildWwwAuthenticateHeader,
+  normalizeAbsoluteUrl,
+  verifyConnectorAccessToken,
+} from "./http/oauth.js";
 import { createServerDependencies, createServerFromDependencies, type ServerDependencies } from "./server.js";
+
+interface AuthContext {
+  kind: "static" | "oauth";
+  callerId: string;
+}
+
+function getPublicOrigin(req: IncomingMessage, fallbackHost: string, fallbackPort: number): string {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto =
+    typeof forwardedProto === "string" && forwardedProto.trim()
+      ? forwardedProto.split(",")[0]!.trim()
+      : "http";
+  const host = req.headers.host ?? `${fallbackHost}:${fallbackPort}`;
+  return `${proto}://${host}`;
+}
+
+function getProtectedResourceMetadataUrl(origin: string): string {
+  return `${origin}/.well-known/oauth-protected-resource`;
+}
+
+function authenticateRequest(
+  req: IncomingMessage,
+  dependencies: ServerDependencies,
+  resourceUrl: string
+): AuthContext | null {
+  if (safeBearerMatch(req.headers.authorization, dependencies.runtimeConfig.apiToken)) {
+    const operatorId = req.headers["x-operator-id"];
+    return {
+      kind: "static",
+      callerId: typeof operatorId === "string" && operatorId.trim() ? operatorId.trim() : `ip:${getClientIp(req)}`,
+    };
+  }
+
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : undefined;
+  const authServerOrigin = dependencies.runtimeConfig.authorizationServerOrigin;
+  if (!token || !authServerOrigin || !dependencies.runtimeConfig.apiToken) {
+    return null;
+  }
+
+  const claims = verifyConnectorAccessToken(token, dependencies.runtimeConfig.apiToken, resourceUrl, authServerOrigin);
+  if (!claims) {
+    return null;
+  }
+
+  return {
+    kind: "oauth",
+    callerId: claims.sub,
+  };
+}
 
 function sendJson(res: ServerResponse, statusCode: number, body: unknown): void {
   if (res.headersSent) {
@@ -115,18 +170,23 @@ async function handleProtectedMcpRequest(
   req: IncomingMessage,
   res: ServerResponse,
   dependencies: ServerDependencies,
-  rateLimiter: FixedWindowRateLimiter
+  rateLimiter: FixedWindowRateLimiter,
+  resourceUrl: string
 ): Promise<void> {
   const requestId = randomUUID();
-  const callerId = getCallerId(req);
   const startedAt = Date.now();
+  let callerId = `ip:${getClientIp(req)}`;
+  let authKind: AuthContext["kind"] | "unknown" = "unknown";
 
   try {
     assertAllowedOrigin(req, dependencies.runtimeConfig.allowedOrigins);
 
-    if (!safeBearerMatch(req.headers.authorization, dependencies.runtimeConfig.apiToken)) {
+    const authContext = authenticateRequest(req, dependencies, resourceUrl);
+    if (!authContext) {
       throw new HttpError(401, "Unauthorized.", "unauthorized");
     }
+    callerId = authContext.callerId;
+    authKind = authContext.kind;
 
     const rateLimit = rateLimiter.take(callerId);
     if (!rateLimit.allowed) {
@@ -149,6 +209,7 @@ async function handleProtectedMcpRequest(
       metadata: {
         bytesRead,
         clientIp: getClientIp(req),
+        authKind,
       },
     });
   } catch (error) {
@@ -181,8 +242,14 @@ async function handleProtectedMcpRequest(
       metadata: {
         clientIp: getClientIp(req),
         statusCode,
+        authKind,
       },
     });
+
+    if (statusCode === 401) {
+      const resourceOrigin = new URL(resourceUrl).origin;
+      res.setHeader("www-authenticate", buildWwwAuthenticateHeader(getProtectedResourceMetadataUrl(resourceOrigin)));
+    }
 
     if (!res.headersSent) {
       sendJson(
@@ -224,7 +291,9 @@ async function main(): Promise<void> {
 
   const server = http.createServer((req, res) => {
     void (async () => {
-      const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? `${host}:${port}`}`);
+      const publicOrigin = getPublicOrigin(req, host, port);
+      const requestUrl = new URL(req.url ?? "/", publicOrigin);
+      const resourceUrl = normalizeAbsoluteUrl(`${publicOrigin}${path}`) || `${publicOrigin}${path}`;
 
       if (requestUrl.pathname === "/") {
         if (req.method !== "GET") {
@@ -251,6 +320,25 @@ async function main(): Promise<void> {
           authMode: dependencies.runtimeConfig.authMode,
           consoleCompatibilityVersion: CONSOLE_COMPATIBILITY_VERSION,
         });
+        return;
+      }
+
+      if (requestUrl.pathname === "/.well-known/oauth-protected-resource") {
+        if (req.method !== "GET") {
+          sendJson(res, 405, { error: "Method not allowed" });
+          return;
+        }
+
+        if (!dependencies.runtimeConfig.authorizationServerOrigin) {
+          sendJson(res, 404, { error: "Not found" });
+          return;
+        }
+
+        sendJson(
+          res,
+          200,
+          buildProtectedResourceMetadata(resourceUrl, dependencies.runtimeConfig.authorizationServerOrigin)
+        );
         return;
       }
 
@@ -293,7 +381,7 @@ async function main(): Promise<void> {
           return;
         }
 
-        await handleProtectedMcpRequest(req, res, dependencies, rateLimiter);
+        await handleProtectedMcpRequest(req, res, dependencies, rateLimiter, resourceUrl);
         return;
       }
 

@@ -23,6 +23,7 @@ export interface RuntimeConfig {
   authMode: "none" | "bearer";
   apiToken?: string;
   allowedOrigins: string[];
+  authorizationServerOrigin?: string;
   requestBodyLimitBytes: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;

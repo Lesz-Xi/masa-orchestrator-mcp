@@ -44,6 +44,19 @@ export function sanitizeOperatorId(input?: string): string {
   return trimmed.replace(/[^a-z0-9_-]/g, "-").slice(0, 48) || "internal-operator";
 }
 
+export function normalizeReturnTo(input?: string | string[] | null): string | null {
+  const value = Array.isArray(input) ? input[0] : input;
+  if (!value?.startsWith("/")) {
+    return null;
+  }
+
+  if (value.startsWith("//")) {
+    return null;
+  }
+
+  return value;
+}
+
 export function verifyPassword(password: string, passwordHash: string): boolean {
   if (passwordHash.startsWith("scrypt:")) {
     const [, saltHex, hashHex] = passwordHash.split(":");

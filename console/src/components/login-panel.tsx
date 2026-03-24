@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function LoginPanel() {
+export function LoginPanel({ returnTo }: { returnTo?: string | null }) {
   const [password, setPassword] = useState("");
   const [operatorId, setOperatorId] = useState("internal-operator");
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ export function LoginPanel() {
         throw new Error(payload.error || "Login failed.");
       }
 
-      window.location.href = "/";
+      window.location.href = returnTo || "/";
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Login failed.");
       setLoading(false);

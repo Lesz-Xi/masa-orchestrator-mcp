@@ -7,3 +7,4 @@ coverage/
 console/node_modules/
 console/.next/
 console/coverage/
+console/tsconfig.tsbuildinfo
