@@ -63,6 +63,24 @@ export async function runBenchmarks(input: {
     input.runtimeConfig.benchmarkTestPath ||
     path.join(packageRoot, input.benchmarkMap.testFile);
 
+  const resolvedBenchmark = path.resolve(benchmarkFile);
+  const resolvedAuditRoot = path.resolve(input.runtimeConfig.auditRoot);
+  const configuredTestPath = input.runtimeConfig.benchmarkTestPath
+    ? path.resolve(input.runtimeConfig.benchmarkTestPath)
+    : null;
+
+  const isConfiguredPath =
+    configuredTestPath !== null && resolvedBenchmark === configuredTestPath;
+  const isWithinAuditRoot =
+    resolvedBenchmark === resolvedAuditRoot ||
+    resolvedBenchmark.startsWith(resolvedAuditRoot + path.sep);
+
+  if (!isConfiguredPath && !isWithinAuditRoot) {
+    throw new Error(
+      `Benchmark path '${resolvedBenchmark}' is outside the configured BENCHMARK_TEST_PATH and AUDIT_ROOT. Execution denied.`
+    );
+  }
+
   const safeEnv: NodeJS.ProcessEnv = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,

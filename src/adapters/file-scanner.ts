@@ -87,10 +87,12 @@ export function assertSandboxedPath(
   }
 }
 
-export async function collectFiles(targetPath: string, globPattern = "**/*.ts", sandbox?: { auditRoot: string; engineRoot: string }): Promise<string[]> {
-  if (sandbox) {
-    assertSandboxedPath(targetPath, sandbox.auditRoot, sandbox.engineRoot);
-  }
+export async function collectFiles(
+  targetPath: string,
+  globPattern: string,
+  sandbox: { auditRoot: string; engineRoot: string }
+): Promise<string[]> {
+  assertSandboxedPath(targetPath, sandbox.auditRoot, sandbox.engineRoot);
   const stats = await fs.promises.stat(targetPath);
 
   if (stats.isFile()) {
@@ -111,7 +113,9 @@ export async function scanFileForPattern(input: {
   filePath: string;
   pattern: RegExp;
   engineRoot: string;
+  auditRoot: string;
 }): Promise<ScanMatch[]> {
+  assertSandboxedPath(input.filePath, input.auditRoot, input.engineRoot);
   const content = await fs.promises.readFile(input.filePath, "utf8");
   const fileClass = classifyFile({
     filePath: input.filePath,

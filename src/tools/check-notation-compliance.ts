@@ -29,6 +29,7 @@ export async function checkNotationCompliance(
         filePath: file,
         pattern,
         engineRoot: runtimeConfig.engineRoot,
+        auditRoot: runtimeConfig.auditRoot,
       });
       allMatches.push(...matches);
     }

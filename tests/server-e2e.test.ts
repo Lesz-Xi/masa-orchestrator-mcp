@@ -173,7 +173,7 @@ describe("stdio MCP server", () => {
         { method: "tools/list", params: {} },
         ListToolsResultSchema
       );
-      expect(toolsResult.tools.length).toBe(8);
+      expect(toolsResult.tools.length).toBe(9);
 
       const callResult = await client.request(
         {
@@ -252,7 +252,7 @@ describe("HTTP MCP server", () => {
         { method: "tools/list", params: {} },
         ListToolsResultSchema
       );
-      expect(toolsResult.tools.length).toBe(8);
+      expect(toolsResult.tools.length).toBe(9);
 
       const headerCall = await client.request(
         {

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createSessionToken,
+  loadConsoleEnv,
   normalizeReturnTo,
   parseSessionToken,
   sanitizeOperatorId,
@@ -37,6 +38,22 @@ describe("console auth", () => {
     );
 
     expect(parseSessionToken(token, "console-secret")?.operatorId).toBe("ops-chief");
+  });
+
+  it("loadConsoleEnv startup guard rejects sha256: hashes", () => {
+    const original = { ...process.env };
+    process.env.ORCHESTRATOR_MCP_URL = "http://localhost:3100/mcp";
+    process.env.ORCHESTRATOR_API_TOKEN = "test-token";
+    process.env.ORCHESTRATOR_CONSOLE_PASSWORD_HASH = "sha256:abc123";
+    process.env.ORCHESTRATOR_CONSOLE_SECRET = "test-secret";
+
+    expect(() => loadConsoleEnv()).toThrow("FATAL");
+
+    Object.assign(process.env, original);
+  });
+
+  it("verifyPassword throws on sha256: format", () => {
+    expect(() => verifyPassword("password", "sha256:abc123")).toThrow("insecure");
   });
 
   it("sanitizes operator ids", () => {

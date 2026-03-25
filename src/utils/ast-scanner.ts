@@ -50,8 +50,8 @@ export function scanFrontendCompliance(sourceCode: string, filePath: string): Co
 
           if (classNameString) {
             // Absolute bounds vs Responsive guards
-            if (classNameString.match(/\bw-\[\d+px\]\b/) && !classNameString.includes('max-w-') && !classNameString.includes('lg:w-') && !classNameString.includes('md:w-')) {
-              issues.push(`Responsive Integrity Violation: Found rigid absolute bounds (${classNameString.match(/\bw-\[\d+px\]\b/)?.[0]}) without responsive guards.`);
+            if (classNameString.match(/\bw-\[\d+px\]/) && !classNameString.includes('max-w-') && !classNameString.includes('lg:w-') && !classNameString.includes('md:w-')) {
+              issues.push(`Responsive Integrity Violation: Found rigid absolute bounds (${classNameString.match(/\bw-\[\d+px\]/)?.[0]}) without responsive guards.`);
             }
 
             // Dark Mode Parity violations

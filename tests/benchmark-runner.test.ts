@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { runtimeConfigFor } from "./helpers.js";
+
 vi.mock("node:child_process", () => ({
   execFile: vi.fn((...args: any[]) => {
     const callback = args[args.length - 1];
@@ -15,18 +17,25 @@ vi.mock("node:child_process", () => ({
 import { runBenchmarks } from "../src/adapters/benchmark-runner.js";
 
 describe("runBenchmarks", () => {
+  it("rejects benchmark paths outside AUDIT_ROOT", async () => {
+    await expect(
+      runBenchmarks({
+        runtimeConfig: runtimeConfigFor("/tmp/engine/src", "/tmp/audit"),
+        benchmarkMap: {
+          suite: "causal-engine-v1",
+          testFile: "../../../etc/passwd",
+          benchmarks: [],
+        },
+        llmIndependence: "verified",
+        notationCompliance: "compliant",
+        blockers: [],
+      })
+    ).rejects.toThrow("Execution denied");
+  });
+
   it("maps benchmark output to individual benchmark states", async () => {
     const result = await runBenchmarks({
-      runtimeConfig: {
-        auditRoot: "/tmp/audit",
-        engineRoot: "/tmp/engine/src",
-        stateFile: "/tmp/audit/.orchestration-state.json",
-        transport: "stdio",
-        host: "127.0.0.1",
-        port: 3100,
-        path: "/mcp",
-        workspaceRoot: "/tmp",
-      },
+      runtimeConfig: runtimeConfigFor("/tmp/engine/src", "/tmp/engine/src"),
       benchmarkMap: {
         suite: "causal-engine-v1",
         testFile: "src/lib/compute/__tests__/structural-equation-solver.test.ts",

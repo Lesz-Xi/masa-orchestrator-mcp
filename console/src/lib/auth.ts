@@ -37,6 +37,13 @@ export function loadConsoleEnv(): ConsoleEnv {
     );
   }
 
+  if (!passwordHash.startsWith("scrypt:")) {
+    throw new Error(
+      "FATAL: ORCHESTRATOR_CONSOLE_PASSWORD_HASH must use the scrypt: format. " +
+        "sha256: and other formats are insecure. Regenerate using the scrypt: format documented in DEPLOYMENT.md."
+    );
+  }
+
   return {
     mcpUrl,
     apiToken,
