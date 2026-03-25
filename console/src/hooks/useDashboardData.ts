@@ -49,7 +49,7 @@ function normalizeDelegationState(
   const pipeline = pipelineValue as Record<string, unknown>;
 
   return {
-    ...(value as DelegationState),
+    ...(value as any),
     tasks: tasks as DelegationState["tasks"],
     blockers: blockers as string[],
     pipeline: {
