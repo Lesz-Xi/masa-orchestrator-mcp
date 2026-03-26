@@ -43,3 +43,4 @@ All client profiles target the same canonical server:
 - Profiles shape invocation style and responsibility boundaries only.
 - Remote use is Streamable HTTP.
 - Process-based local use is available for Codex and as fallback for the other profiles.
+- All shipped profiles should use search-first, partial-read behavior for large files instead of whole-file reads.

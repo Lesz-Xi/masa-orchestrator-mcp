@@ -160,6 +160,14 @@ Compliance and audit scanners only read files under the configured scan roots: `
 
 If you want to scan a different project tree, add it to `ADDITIONAL_SCAN_ROOTS` first. Out-of-root paths are rejected intentionally.
 
+## Large File Access
+
+Shipped client profiles should handle large files with search-first, partial-read behavior.
+
+- Search for relevant headings, ids, classes, symbols, or keywords first.
+- Use offset/limit or equivalent chunked reads for large files.
+- Do not repeat whole-file reads after a token-limit failure.
+
 ## Connecting Claude
 
 To connect Claude as a custom MCP connector, see:

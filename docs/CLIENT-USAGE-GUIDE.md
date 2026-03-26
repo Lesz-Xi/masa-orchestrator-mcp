@@ -146,6 +146,15 @@ All three profiles read the same benchmark and delegation state. Treat the serve
 
 If Codex updates delegation state during execution, Claude and Gemini should review that state rather than recreating it manually.
 
+## Large File Guardrail
+
+All shipped profiles should treat large files as search-first, partial-read tasks.
+
+- Search for headings, ids, classes, keywords, or symbols first.
+- Use offset/limit or equivalent partial-read parameters for large files.
+- Do not retry the same whole-file read after a token-limit error.
+- Prefer multiple targeted reads over one full-file read.
+
 ## Path Guardrails
 
 `check_notation_compliance`, `audit_claims`, and `validate_assumption_envelope` only accept paths inside the configured scan roots: `AUDIT_ROOT`, `ENGINE_ROOT`, and any roots listed in `ADDITIONAL_SCAN_ROOTS`.

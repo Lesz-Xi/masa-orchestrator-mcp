@@ -73,6 +73,21 @@ describe("client profiles", () => {
     expect(fs.existsSync(promptsDir)).toBe(true);
   });
 
+  it("ships large-file read guardrails in every profile prompt", () => {
+    const profileFiles = ["codex.json", "claude.json", "gemini.json"];
+
+    for (const fileName of profileFiles) {
+      const parsed = clientProfileSchema.parse(readJson(path.join(profilesDir, fileName)));
+      const promptPath = path.join(packageRoot, parsed.promptTemplate);
+      const prompt = fs.readFileSync(promptPath, "utf8");
+
+      expect(prompt).toContain("Large-file discipline:");
+      expect(prompt.toLowerCase()).toContain("search first");
+      expect(prompt.toLowerCase()).toContain("offset/limit");
+      expect(prompt.toLowerCase()).toMatch(/whole large files|full-file read/);
+    }
+  });
+
   it("matches the transport defaults for the chosen role split", () => {
     const codex = clientProfileSchema.parse(readJson(path.join(profilesDir, "codex.json")));
     const claude = clientProfileSchema.parse(readJson(path.join(profilesDir, "claude.json")));
@@ -107,7 +122,7 @@ describe("client profiles", () => {
 
     for (const filePath of filesToCheck) {
       const contents = fs.readFileSync(filePath, "utf8").toLowerCase();
-      expect(contents.includes("sse")).toBe(false);
+      expect(/\bsse\b/.test(contents)).toBe(false);
     }
   });
 });
