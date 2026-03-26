@@ -16,8 +16,7 @@ export async function checkNotationCompliance(
   rules: NotationRule[]
 ) {
   const files = await collectFiles(input.path, input.glob, {
-    auditRoot: runtimeConfig.auditRoot,
-    engineRoot: runtimeConfig.engineRoot,
+    allowedRoots: runtimeConfig.allowedScanRoots,
   });
   const matchesByRule: Array<{ rule: NotationRule; matches: Awaited<ReturnType<typeof scanFileForPattern>> }> = [];
 
@@ -29,7 +28,7 @@ export async function checkNotationCompliance(
         filePath: file,
         pattern,
         engineRoot: runtimeConfig.engineRoot,
-        auditRoot: runtimeConfig.auditRoot,
+        allowedRoots: runtimeConfig.allowedScanRoots,
       });
       allMatches.push(...matches);
     }

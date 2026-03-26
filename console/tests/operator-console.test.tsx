@@ -29,6 +29,7 @@ describe("OperatorConsole", () => {
             defaults: {
               auditRoot: "/audit",
               engineRoot: "/engine",
+              additionalScanRoots: ["/crucible"],
               benchmarkTestPath: "/bench.test.ts",
             },
             health: {

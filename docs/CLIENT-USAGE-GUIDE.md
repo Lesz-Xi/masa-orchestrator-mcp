@@ -17,6 +17,7 @@ Set these for every profile:
 ```bash
 export AUDIT_ROOT=/Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit
 export ENGINE_ROOT=/Users/lesz/Documents/Synthetic-Mind/synthesis-engine/src
+export ADDITIONAL_SCAN_ROOTS=/Users/lesz/Documents/Synthetic-Mind/crucible
 ```
 
 Optional shared state override:
@@ -82,6 +83,7 @@ Example process-based MCP client config:
       "env": {
         "AUDIT_ROOT": "/Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit",
         "ENGINE_ROOT": "/Users/lesz/Documents/Synthetic-Mind/synthesis-engine/src",
+        "ADDITIONAL_SCAN_ROOTS": "/Users/lesz/Documents/Synthetic-Mind/crucible",
         "STATE_FILE": "/Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit/.orchestration-state.json"
       }
     }
@@ -146,6 +148,6 @@ If Codex updates delegation state during execution, Claude and Gemini should rev
 
 ## Path Guardrails
 
-`check_notation_compliance`, `audit_claims`, and `validate_assumption_envelope` only accept paths inside the configured `AUDIT_ROOT` or `ENGINE_ROOT`.
+`check_notation_compliance`, `audit_claims`, and `validate_assumption_envelope` only accept paths inside the configured scan roots: `AUDIT_ROOT`, `ENGINE_ROOT`, and any roots listed in `ADDITIONAL_SCAN_ROOTS`.
 
-If you need to scan a different repo or spec directory, update those environment variables first. The server rejects out-of-root paths by design.
+If you need to scan a different repo or spec directory, add it to `ADDITIONAL_SCAN_ROOTS` first. The server rejects out-of-root paths by design.

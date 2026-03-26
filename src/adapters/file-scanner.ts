@@ -68,21 +68,19 @@ function advanceCommentState(line: string, previous: CommentState): CommentState
 
 export function assertSandboxedPath(
   targetPath: string,
-  auditRoot: string,
-  engineRoot: string
+  allowedRoots: string[]
 ): void {
   const resolved = path.resolve(targetPath);
-  const resolvedAudit = path.resolve(auditRoot);
-  const resolvedEngine = path.resolve(engineRoot);
+  const resolvedRoots = Array.from(new Set(allowedRoots.map((root) => path.resolve(root))));
+  const inAllowedRoot = resolvedRoots.some(
+    (root) => resolved === root || resolved.startsWith(root + path.sep)
+  );
 
-  const inAudit =
-    resolved === resolvedAudit || resolved.startsWith(resolvedAudit + path.sep);
-  const inEngine =
-    resolved === resolvedEngine || resolved.startsWith(resolvedEngine + path.sep);
-
-  if (!inAudit && !inEngine) {
+  if (!inAllowedRoot) {
     throw new Error(
-      `Path '${resolved}' is outside the sandboxed AUDIT_ROOT ('${resolvedAudit}') and ENGINE_ROOT ('${resolvedEngine}'). Access denied.`
+      `Path '${resolved}' is outside the configured scan roots (${resolvedRoots
+        .map((root) => `'${root}'`)
+        .join(", ")}). Access denied.`
     );
   }
 }
@@ -90,9 +88,9 @@ export function assertSandboxedPath(
 export async function collectFiles(
   targetPath: string,
   globPattern: string,
-  sandbox: { auditRoot: string; engineRoot: string }
+  sandbox: { allowedRoots: string[] }
 ): Promise<string[]> {
-  assertSandboxedPath(targetPath, sandbox.auditRoot, sandbox.engineRoot);
+  assertSandboxedPath(targetPath, sandbox.allowedRoots);
   const stats = await fs.promises.stat(targetPath);
 
   if (stats.isFile()) {
@@ -113,9 +111,9 @@ export async function scanFileForPattern(input: {
   filePath: string;
   pattern: RegExp;
   engineRoot: string;
-  auditRoot: string;
+  allowedRoots: string[];
 }): Promise<ScanMatch[]> {
-  assertSandboxedPath(input.filePath, input.auditRoot, input.engineRoot);
+  assertSandboxedPath(input.filePath, input.allowedRoots);
   const content = await fs.promises.readFile(input.filePath, "utf8");
   const fileClass = classifyFile({
     filePath: input.filePath,

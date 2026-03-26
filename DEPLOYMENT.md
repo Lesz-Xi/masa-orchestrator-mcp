@@ -113,6 +113,7 @@ Set these in the deployment environment:
 ```bash
 AUDIT_ROOT=/absolute/path/to/Agentic-Spec-Driven-Audit
 ENGINE_ROOT=/absolute/path/to/synthesis-engine/src
+ADDITIONAL_SCAN_ROOTS=/absolute/path/to/crucible,/absolute/path/to/other-approved-tree
 MCP_TRANSPORT=http
 MCP_HOST=0.0.0.0
 MCP_PORT=3100
@@ -256,6 +257,7 @@ MCP_PORT=3100
 MCP_PATH=/mcp
 ORCHESTRATOR_API_TOKEN=replace-with-long-random-token
 ORCHESTRATOR_ALLOWED_ORIGINS=https://orchestrator.wuweism.com
+ADDITIONAL_SCAN_ROOTS=/srv/masa/crucible
 ORCHESTRATOR_RATE_LIMIT_WINDOW_MS=60000
 ORCHESTRATOR_RATE_LIMIT_MAX=60
 ORCHESTRATOR_MAX_BODY_BYTES=1048576
@@ -352,6 +354,7 @@ npm ci
 npm run build
 export AUDIT_ROOT=/srv/masa/Agentic-Spec-Driven-Audit
 export ENGINE_ROOT=/srv/masa/synthesis-engine/src
+export ADDITIONAL_SCAN_ROOTS=/srv/masa/crucible
 export STATE_FILE=/srv/masa/Agentic-Spec-Driven-Audit/.orchestration-state.json
 export BENCHMARK_TEST_PATH=/srv/masa/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
 export MCP_TRANSPORT=http
@@ -374,6 +377,7 @@ export ORCHESTRATOR_CONSOLE_PASSWORD_HASH=scrypt:<salt-hex>:<hash-hex>
 export ORCHESTRATOR_CONSOLE_SECRET=replace-with-long-random-secret
 export AUDIT_ROOT=/srv/masa/Agentic-Spec-Driven-Audit
 export ENGINE_ROOT=/srv/masa/synthesis-engine/src
+export ADDITIONAL_SCAN_ROOTS=/srv/masa/crucible
 export BENCHMARK_TEST_PATH=/srv/masa/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
 npm run build
 npm run start

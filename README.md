@@ -49,6 +49,7 @@ export ENGINE_ROOT=/absolute/path/to/synthesis-engine/src
 Optional:
 
 ```bash
+export ADDITIONAL_SCAN_ROOTS=/absolute/path/to/crucible,/absolute/path/to/another-approved-tree
 export STATE_FILE=/absolute/path/to/.orchestration-state.json
 export BENCHMARK_TEST_PATH=/absolute/path/to/structural-equation-solver.test.ts
 export ORCHESTRATOR_API_TOKEN=replace-with-strong-shared-token
@@ -155,9 +156,9 @@ npm test
 
 ## Path Boundaries
 
-Compliance and audit scanners only read files under the configured `AUDIT_ROOT` or `ENGINE_ROOT`.
+Compliance and audit scanners only read files under the configured scan roots: `AUDIT_ROOT`, `ENGINE_ROOT`, and any comma-separated entries in `ADDITIONAL_SCAN_ROOTS`.
 
-If you want to scan a different project tree, point those environment variables at that tree first. Out-of-root paths are rejected intentionally.
+If you want to scan a different project tree, add it to `ADDITIONAL_SCAN_ROOTS` first. Out-of-root paths are rejected intentionally.
 
 ## Connecting Claude
 

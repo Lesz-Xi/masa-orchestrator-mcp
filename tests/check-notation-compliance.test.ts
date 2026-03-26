@@ -46,4 +46,32 @@ describe("checkNotationCompliance", () => {
     expect(result.summary.errors).toBeGreaterThan(0);
     expect(result.violations.some((violation) => violation.file.endsWith("solver.ts"))).toBe(true);
   });
+
+  it("scans files inside additional configured roots", async () => {
+    const workspace = makeTempDir("masa-notation-extra-");
+    tempDirs.push(workspace);
+    const auditRoot = path.join(workspace, "Agentic-Spec-Driven-Audit");
+    const engineRoot = path.join(workspace, "synthesis-engine", "src");
+    const crucibleRoot = path.join(workspace, "crucible");
+    const runtimeConfig = runtimeConfigFor(engineRoot, auditRoot, [crucibleRoot]);
+
+    writeFile(
+      path.join(crucibleRoot, "docs", "specs", "CRUCIBLE_SPEC.md"),
+      "Counterfactual reasoning appears here as planned future work.\n"
+    );
+
+    const result = await checkNotationCompliance(
+      {
+        path: path.join(crucibleRoot, "docs", "specs"),
+        glob: "**/*.md",
+        scope: "all",
+      },
+      runtimeConfig,
+      loadNotationRules(new URL("../src/config/load-config.ts", import.meta.url).href)
+    );
+
+    expect(result.filesScanned).toBe(1);
+    expect(result.violations).toEqual([]);
+    expect(result.compliant).toBe(true);
+  });
 });

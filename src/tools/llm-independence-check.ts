@@ -17,8 +17,7 @@ export async function llmIndependenceCheck(
   runtimeConfig: RuntimeConfig
 ) {
   const files = await collectFiles(input.enginePath, "**/*.ts", {
-    auditRoot: runtimeConfig.auditRoot,
-    engineRoot: runtimeConfig.engineRoot,
+    allowedRoots: runtimeConfig.allowedScanRoots,
   });
   const violations: Array<{
     file: string;

@@ -26,8 +26,7 @@ export async function auditClaims(
   runtimeConfig: RuntimeConfig
 ) {
   const files = await collectFiles(input.path, "**/*.{ts,tsx,md}", {
-    auditRoot: runtimeConfig.auditRoot,
-    engineRoot: runtimeConfig.engineRoot,
+    allowedRoots: runtimeConfig.allowedScanRoots,
   });
   const overclaims: ClaimFinding[] = [];
   const trackACore = new Set<string>();

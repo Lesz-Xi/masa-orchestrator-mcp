@@ -17,7 +17,7 @@ vi.mock("node:child_process", () => ({
 import { runBenchmarks } from "../src/adapters/benchmark-runner.js";
 
 describe("runBenchmarks", () => {
-  it("rejects benchmark paths outside AUDIT_ROOT", async () => {
+  it("rejects benchmark paths outside the configured scan roots", async () => {
     await expect(
       runBenchmarks({
         runtimeConfig: runtimeConfigFor("/tmp/engine/src", "/tmp/audit"),

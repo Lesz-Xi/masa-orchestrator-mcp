@@ -16,8 +16,7 @@ export async function validateAssumptionEnvelope(
   runtimeConfig: RuntimeConfig
 ) {
   const files = await collectFiles(input.path, "**/*.ts", {
-    auditRoot: runtimeConfig.auditRoot,
-    engineRoot: runtimeConfig.engineRoot,
+    allowedRoots: runtimeConfig.allowedScanRoots,
   });
   const violations: Array<{
     file: string;

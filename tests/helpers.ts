@@ -13,10 +13,16 @@ export function writeFile(filePath: string, content: string): void {
   fs.writeFileSync(filePath, content);
 }
 
-export function runtimeConfigFor(engineRoot: string, auditRoot: string): RuntimeConfig {
+export function runtimeConfigFor(
+  engineRoot: string,
+  auditRoot: string,
+  additionalScanRoots: string[] = []
+): RuntimeConfig {
   return {
     auditRoot,
     engineRoot,
+    additionalScanRoots,
+    allowedScanRoots: [auditRoot, engineRoot, ...additionalScanRoots],
     stateFile: path.join(auditRoot, ".orchestration-state.json"),
     transport: "stdio",
     host: "127.0.0.1",

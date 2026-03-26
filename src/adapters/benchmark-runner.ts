@@ -71,13 +71,14 @@ export async function runBenchmarks(input: {
 
   const isConfiguredPath =
     configuredTestPath !== null && resolvedBenchmark === configuredTestPath;
-  const isWithinAuditRoot =
-    resolvedBenchmark === resolvedAuditRoot ||
-    resolvedBenchmark.startsWith(resolvedAuditRoot + path.sep);
+  const isWithinAllowedRoot = input.runtimeConfig.allowedScanRoots.some((root) => {
+    const resolvedRoot = path.resolve(root);
+    return resolvedBenchmark === resolvedRoot || resolvedBenchmark.startsWith(resolvedRoot + path.sep);
+  });
 
-  if (!isConfiguredPath && !isWithinAuditRoot) {
+  if (!isConfiguredPath && !isWithinAllowedRoot) {
     throw new Error(
-      `Benchmark path '${resolvedBenchmark}' is outside the configured BENCHMARK_TEST_PATH and AUDIT_ROOT. Execution denied.`
+      `Benchmark path '${resolvedBenchmark}' is outside the configured BENCHMARK_TEST_PATH and scan roots. Execution denied.`
     );
   }
 

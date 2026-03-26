@@ -44,6 +44,7 @@ const benchmarkConfigSchema: z.ZodType<BenchmarkMapConfig> = z.object({
 const runtimeEnvSchema = z.object({
   AUDIT_ROOT: z.string().min(1, "AUDIT_ROOT is required."),
   ENGINE_ROOT: z.string().min(1, "ENGINE_ROOT is required."),
+  ADDITIONAL_SCAN_ROOTS: z.string().optional(),
   STATE_FILE: z.string().optional(),
   BENCHMARK_TEST_PATH: z.string().optional(),
   MCP_TRANSPORT: z.enum(["stdio", "http"]).default("stdio"),
@@ -62,12 +63,28 @@ function readJsonFile<T>(filePath: string, schema: z.ZodType<T>): T {
   return schema.parse(JSON.parse(raw));
 }
 
+function uniqueResolvedRoots(paths: string[]): string[] {
+  return Array.from(new Set(paths.map((value) => path.resolve(value))));
+}
+
 export function loadRuntimeConfig(importMetaUrl: string): RuntimeConfig {
   void importMetaUrl;
   const parsed = runtimeEnvSchema.parse(process.env);
 
   const resolvedAuditRoot = ensureAbsolute(parsed.AUDIT_ROOT, process.cwd());
   const resolvedEngineRoot = ensureAbsolute(parsed.ENGINE_ROOT, process.cwd());
+  const additionalScanRoots = uniqueResolvedRoots(
+    (parsed.ADDITIONAL_SCAN_ROOTS || "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => ensureAbsolute(entry, process.cwd()))
+  ).filter((entry) => entry !== resolvedAuditRoot && entry !== resolvedEngineRoot);
+  const allowedScanRoots = uniqueResolvedRoots([
+    resolvedAuditRoot,
+    resolvedEngineRoot,
+    ...additionalScanRoots,
+  ]);
   const workspaceRoot = path.dirname(resolvedAuditRoot);
   const normalizedPath = parsed.MCP_PATH.startsWith("/") ? parsed.MCP_PATH : `/${parsed.MCP_PATH}`;
   const allowedOrigins = (parsed.ORCHESTRATOR_ALLOWED_ORIGINS || "")
@@ -82,6 +99,8 @@ export function loadRuntimeConfig(importMetaUrl: string): RuntimeConfig {
   return {
     auditRoot: resolvedAuditRoot,
     engineRoot: resolvedEngineRoot,
+    additionalScanRoots,
+    allowedScanRoots,
     stateFile: ensureAbsolute(
       parsed.STATE_FILE || path.join(resolvedAuditRoot, ".orchestration-state.json"),
       process.cwd()

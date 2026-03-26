@@ -6,6 +6,7 @@ export type BootstrapPayload = {
   defaults: {
     auditRoot: string;
     engineRoot: string;
+    additionalScanRoots: string[];
     benchmarkTestPath: string;
   };
   health: Record<string, unknown>;
@@ -144,11 +145,11 @@ export function inferDefaultValue(
   }
 
   if (tool.name === "check_notation_compliance" && field.name === "path") {
-    return defaults.engineRoot || defaults.auditRoot;
+    return defaults.engineRoot || defaults.additionalScanRoots[0] || defaults.auditRoot;
   }
 
   if (field.name === "path") {
-    return defaults.auditRoot;
+    return defaults.auditRoot || defaults.additionalScanRoots[0] || "";
   }
 
   return "";

@@ -65,7 +65,7 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     recommendedInputs: [
       "Engine-core path for v1.0 compliance scans",
       "Narrow path slices when investigating noisy output",
-      "Path must be inside AUDIT_ROOT or ENGINE_ROOT",
+      "Path must be inside one of the configured scan roots",
     ],
     fields: [
       {
@@ -73,7 +73,7 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
         label: "Scan Path",
         kind: "text",
         required: true,
-        placeholder: "Path under AUDIT_ROOT or ENGINE_ROOT",
+        placeholder: "Path under a configured scan root",
       },
       { name: "glob", label: "Glob Filter", kind: "text", placeholder: "**/*.ts" },
       {
@@ -96,7 +96,7 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     recommendedInputs: [
       "Focused files or directories under review",
       "Current benchmark passing count for claim calibration",
-      "Path must be inside AUDIT_ROOT or ENGINE_ROOT",
+      "Path must be inside one of the configured scan roots",
     ],
     fields: [
       { name: "path", label: "Audit Path", kind: "text", required: true, placeholder: "/abs/path/to/file-or-dir" },
@@ -228,7 +228,7 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     summary: "Check engine-core files against the declared v1 assumption envelope.",
     recommendedInputs: [
       "Use engine-core slices instead of the entire workspace",
-      "Path must be inside AUDIT_ROOT or ENGINE_ROOT",
+      "Path must be inside one of the configured scan roots",
     ],
     fields: [
       {
@@ -236,7 +236,7 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
         label: "Path",
         kind: "text",
         required: true,
-        placeholder: "Path under AUDIT_ROOT or ENGINE_ROOT",
+        placeholder: "Path under a configured scan root",
       },
     ],
   },

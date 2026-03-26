@@ -17,31 +17,37 @@ afterEach(() => {
 describe("file-scanner security boundaries", () => {
   it("assertSandboxedPath rejects paths outside audit and engine roots", () => {
     expect(() =>
-      assertSandboxedPath("/etc/passwd", "/tmp/audit", "/tmp/engine")
+      assertSandboxedPath("/etc/passwd", ["/tmp/audit", "/tmp/engine"])
     ).toThrow("Access denied");
   });
 
   it("assertSandboxedPath rejects traversal sequences", () => {
     expect(() =>
-      assertSandboxedPath("/tmp/audit/../../../etc/passwd", "/tmp/audit", "/tmp/engine")
+      assertSandboxedPath("/tmp/audit/../../../etc/passwd", ["/tmp/audit", "/tmp/engine"])
     ).toThrow("Access denied");
   });
 
   it("assertSandboxedPath allows paths within audit root", () => {
     expect(() =>
-      assertSandboxedPath("/tmp/audit/file.ts", "/tmp/audit", "/tmp/engine")
+      assertSandboxedPath("/tmp/audit/file.ts", ["/tmp/audit", "/tmp/engine"])
     ).not.toThrow();
   });
 
   it("assertSandboxedPath allows paths within engine root", () => {
     expect(() =>
-      assertSandboxedPath("/tmp/engine/src/lib/solver.ts", "/tmp/audit", "/tmp/engine")
+      assertSandboxedPath("/tmp/engine/src/lib/solver.ts", ["/tmp/audit", "/tmp/engine"])
+    ).not.toThrow();
+  });
+
+  it("assertSandboxedPath allows paths within additional configured roots", () => {
+    expect(() =>
+      assertSandboxedPath("/tmp/crucible/docs/specs/spec.md", ["/tmp/audit", "/tmp/engine", "/tmp/crucible"])
     ).not.toThrow();
   });
 
   it("collectFiles rejects paths outside sandbox", async () => {
     await expect(
-      collectFiles("/etc", "**/*.conf", { auditRoot: "/tmp/audit", engineRoot: "/tmp/engine" })
+      collectFiles("/etc", "**/*.conf", { allowedRoots: ["/tmp/audit", "/tmp/engine"] })
     ).rejects.toThrow("Access denied");
   });
 
@@ -52,8 +58,7 @@ describe("file-scanner security boundaries", () => {
     writeFile(path.join(auditRoot, "test.ts"), "const x = 1;\n");
 
     const files = await collectFiles(auditRoot, "**/*.ts", {
-      auditRoot,
-      engineRoot: path.join(workspace, "engine"),
+      allowedRoots: [auditRoot, path.join(workspace, "engine")],
     });
 
     expect(files).toHaveLength(1);
@@ -66,7 +71,7 @@ describe("file-scanner security boundaries", () => {
         filePath: "/etc/passwd",
         pattern: /root/gi,
         engineRoot: "/tmp/engine",
-        auditRoot: "/tmp/audit",
+        allowedRoots: ["/tmp/audit", "/tmp/engine"],
       })
     ).rejects.toThrow("Access denied");
   });

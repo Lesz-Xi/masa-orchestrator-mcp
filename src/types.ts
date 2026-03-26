@@ -15,6 +15,8 @@ export type Severity = "error" | "warning";
 export interface RuntimeConfig {
   auditRoot: string;
   engineRoot: string;
+  additionalScanRoots: string[];
+  allowedScanRoots: string[];
   stateFile: string;
   benchmarkTestPath?: string;
   transport: "stdio" | "http";

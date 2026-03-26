@@ -23,6 +23,10 @@ export function getConsoleDefaults() {
   return {
     auditRoot: process.env.AUDIT_ROOT || "",
     engineRoot: process.env.ENGINE_ROOT || "",
+    additionalScanRoots: (process.env.ADDITIONAL_SCAN_ROOTS || "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean),
     benchmarkTestPath: process.env.BENCHMARK_TEST_PATH || "",
   };
 }
