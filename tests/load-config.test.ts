@@ -1,10 +1,14 @@
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { loadRuntimeConfig } from "../src/config/load-config.js";
 
 const originalEnv = { ...process.env };
+
+beforeEach(() => {
+  process.env = { ...originalEnv };
+});
 
 afterEach(() => {
   process.env = { ...originalEnv };
@@ -14,6 +18,7 @@ describe("loadRuntimeConfig", () => {
   it("applies default transport host, port, and path", () => {
     process.env.AUDIT_ROOT = "/tmp/audit";
     process.env.ENGINE_ROOT = "/tmp/engine";
+    delete process.env.ADDITIONAL_SCAN_ROOTS;
 
     const config = loadRuntimeConfig(import.meta.url);
 
@@ -31,6 +36,7 @@ describe("loadRuntimeConfig", () => {
     process.env.AUDIT_ROOT = "/tmp/audit";
     process.env.ENGINE_ROOT = "/tmp/engine";
     process.env.MCP_TRANSPORT = "sse";
+    delete process.env.ADDITIONAL_SCAN_ROOTS;
 
     expect(() => loadRuntimeConfig(import.meta.url)).toThrow();
   });
@@ -38,6 +44,7 @@ describe("loadRuntimeConfig", () => {
   it("fails when required roots are missing", () => {
     delete process.env.AUDIT_ROOT;
     delete process.env.ENGINE_ROOT;
+    delete process.env.ADDITIONAL_SCAN_ROOTS;
 
     expect(() => loadRuntimeConfig(import.meta.url)).toThrow();
   });
@@ -47,6 +54,7 @@ describe("loadRuntimeConfig", () => {
     process.env.ENGINE_ROOT = "/tmp/engine";
     process.env.MCP_TRANSPORT = "http";
     delete process.env.ORCHESTRATOR_API_TOKEN;
+    delete process.env.ADDITIONAL_SCAN_ROOTS;
 
     expect(() => loadRuntimeConfig(import.meta.url)).toThrow("ORCHESTRATOR_API_TOKEN");
   });
