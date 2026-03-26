@@ -86,7 +86,7 @@ describe("OperatorConsole", () => {
                         taskId: "TASK-001",
                         taskType: "Integration",
                         currentStatus: "in_progress",
-                        currentAgent: "gpt",
+                        currentAgent: "codex",
                         history: [],
                       },
                     ],

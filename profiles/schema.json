@@ -53,7 +53,8 @@
           "llm_independence_check",
           "delegation_chain_state",
           "generate_consolidation",
-          "validate_assumption_envelope"
+          "validate_assumption_envelope",
+          "check_frontend_compliance"
         ]
       }
     },
@@ -70,7 +71,8 @@
           "llm_independence_check",
           "delegation_chain_state",
           "generate_consolidation",
-          "validate_assumption_envelope"
+          "validate_assumption_envelope",
+          "check_frontend_compliance"
         ]
       }
     },

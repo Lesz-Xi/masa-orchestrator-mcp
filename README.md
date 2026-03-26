@@ -58,6 +58,19 @@ export ORCHESTRATOR_CONSOLE_SECRET=replace-with-long-random-secret
 export ORCHESTRATOR_MCP_URL=http://127.0.0.1:3100/mcp
 ```
 
+Bootstrap the session handoff artifacts required by the workflow:
+
+```bash
+npm run agent:bootstrap
+```
+
+This creates placeholder files under `.agent/state/` when they are missing:
+
+- `session-handoff.json`
+- `session-handoff.md`
+- `causal-graph-registry.json`
+- `identification-cache.json`
+
 ## Run
 
 Install dependencies:
@@ -98,12 +111,53 @@ The backend keeps `GET /health` public, but `POST /mcp` and `GET /activity` requ
 Authorization: Bearer <ORCHESTRATOR_API_TOKEN>
 ```
 
+## Production Deploy
+
+Current production deploy target:
+
+- host: `<deploy-user>@<droplet-host>`
+- repo root: `/srv/masa/masa-orchestrator-mcp`
+- backend service: `masa-orchestrator-backend`
+- console service: `masa-orchestrator-console`
+
+Pull only:
+
+```bash
+ssh <deploy-user>@<droplet-host> 'cd /srv/masa/masa-orchestrator-mcp && git pull origin main'
+```
+
+Pull, rebuild, and restart both services:
+
+```bash
+ssh <deploy-user>@<droplet-host> '
+cd /srv/masa/masa-orchestrator-mcp &&
+git pull origin main &&
+npm ci &&
+npm run build &&
+systemctl restart masa-orchestrator-backend &&
+cd /srv/masa/masa-orchestrator-mcp/console &&
+npm run build &&
+systemctl restart masa-orchestrator-console
+'
+```
+
+Droplet environment examples live in:
+
+- `examples/droplet-backend.env`
+- `examples/droplet-console.env`
+
 ## Verify
 
 ```bash
 npm run build
 npm test
 ```
+
+## Path Boundaries
+
+Compliance and audit scanners only read files under the configured `AUDIT_ROOT` or `ENGINE_ROOT`.
+
+If you want to scan a different project tree, point those environment variables at that tree first. Out-of-root paths are rejected intentionally.
 
 ## Connecting Claude
 

@@ -3,6 +3,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 import { loadBenchmarkMap, loadEngineCategories, loadNotationRules, loadRuntimeConfig } from "./config/load-config.js";
+import { DELEGATION_AGENT_LIST, DELEGATION_STATUS_LIST } from "./delegation-contract.js";
 import { DelegationStore } from "./state/delegation-store.js";
 import { TOOL_CATALOG_BY_NAME } from "./shared/tool-catalog.js";
 import { auditClaims, auditClaimsSchema } from "./tools/audit-claims.js";
@@ -160,8 +161,8 @@ export function createServerFromDependencies({
           action: { type: "string", enum: ["get", "update"] },
           taskId: { type: "string" },
           taskType: { type: "string" },
-          newStatus: { type: "string" },
-          agent: { type: "string", enum: ["gemini", "claude", "gpt"] },
+          newStatus: { type: "string", enum: [...DELEGATION_STATUS_LIST] },
+          agent: { type: "string", enum: [...DELEGATION_AGENT_LIST] },
           notes: { type: "string" },
         },
       },

@@ -48,6 +48,18 @@ describe("client profiles", () => {
     }
   });
 
+  it("keeps the published JSON schema tool enums aligned to the canonical server tool list", () => {
+    const schema = readJson<{
+      properties: {
+        enabledTools: { items: { enum: string[] } };
+        toolPriority: { items: { enum: string[] } };
+      };
+    }>(path.join(profilesDir, "schema.json"));
+
+    expect(schema.properties.enabledTools.items.enum).toEqual(TOOL_NAME_LIST);
+    expect(schema.properties.toolPriority.items.enum).toEqual(TOOL_NAME_LIST);
+  });
+
   it("ships prompt templates for every profile", () => {
     const profileFiles = ["codex.json", "claude.json", "gemini.json"];
 

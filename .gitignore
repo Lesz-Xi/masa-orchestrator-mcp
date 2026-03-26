@@ -8,3 +8,5 @@ console/node_modules/
 console/.next/
 console/coverage/
 console/tsconfig.tsbuildinfo
+.agent/state/*
+!.agent/state/.gitkeep

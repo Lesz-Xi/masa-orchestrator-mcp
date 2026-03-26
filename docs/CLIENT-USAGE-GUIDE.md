@@ -26,6 +26,12 @@ export STATE_FILE=/Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit
 export BENCHMARK_TEST_PATH=/Users/lesz/Documents/Synthetic-Mind/synthesis-engine/src/lib/compute/__tests__/structural-equation-solver.test.ts
 ```
 
+Initialize the handoff artifacts expected by the workflow:
+
+```bash
+npm run agent:bootstrap
+```
+
 ## When To Use Each Profile
 
 - Use Codex when work must be implemented, tested, or handed off with evidence.
@@ -60,7 +66,7 @@ export BENCHMARK_TEST_PATH=/Users/lesz/Documents/Synthetic-Mind/synthesis-engine
 Start the server in process mode:
 
 ```bash
-cd /Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit/masa-orchestration
+cd /Users/lesz/Documents/masa-orchestrator-mcp/masa-orchestrator-mcp
 npm run dev
 ```
 
@@ -72,7 +78,7 @@ Example process-based MCP client config:
     "masa-orchestration": {
       "command": "npm",
       "args": ["run", "dev"],
-      "cwd": "/Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit/masa-orchestration",
+      "cwd": "/Users/lesz/Documents/masa-orchestrator-mcp/masa-orchestrator-mcp",
       "env": {
         "AUDIT_ROOT": "/Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit",
         "ENGINE_ROOT": "/Users/lesz/Documents/Synthetic-Mind/synthesis-engine/src",
@@ -98,8 +104,14 @@ For full setup instructions, verification commands, and troubleshooting see:
 Start the server in HTTP mode:
 
 ```bash
-cd /Users/lesz/Documents/Synthetic-Mind/Agentic-Spec-Driven-Audit/masa-orchestration
+cd /Users/lesz/Documents/masa-orchestrator-mcp/masa-orchestrator-mcp
 npm run dev:http
+```
+
+Current production deploy path on the Droplet is different:
+
+```bash
+ssh <deploy-user>@<droplet-host> 'cd /srv/masa/masa-orchestrator-mcp && git pull origin main'
 ```
 
 Default endpoint:
@@ -131,3 +143,9 @@ Example HTTP MCP client config:
 All three profiles read the same benchmark and delegation state. Treat the server as the source of truth, not the individual client session.
 
 If Codex updates delegation state during execution, Claude and Gemini should review that state rather than recreating it manually.
+
+## Path Guardrails
+
+`check_notation_compliance`, `audit_claims`, and `validate_assumption_envelope` only accept paths inside the configured `AUDIT_ROOT` or `ENGINE_ROOT`.
+
+If you need to scan a different repo or spec directory, update those environment variables first. The server rejects out-of-root paths by design.

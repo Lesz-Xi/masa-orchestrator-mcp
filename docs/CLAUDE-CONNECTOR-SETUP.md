@@ -112,6 +112,18 @@ proxy_set_header X-Forwarded-Proto $scheme;
 
 **Fix:** Pull the latest `main`, rebuild the console (`npm run build`), and restart the console process.
 
+Current production shortcut:
+
+```bash
+ssh <deploy-user>@<droplet-host> '
+cd /srv/masa/masa-orchestrator-mcp &&
+git pull origin main &&
+cd /srv/masa/masa-orchestrator-mcp/console &&
+npm run build &&
+systemctl restart masa-orchestrator-console
+'
+```
+
 ### Connector says "Couldn't reach the MCP server"
 
 Possible causes:
@@ -120,3 +132,12 @@ Possible causes:
 2. **nginx not forwarding** — verify the nginx config routes `POST /mcp` to `http://127.0.0.1:3100/mcp` with `proxy_http_version 1.1` and a sufficient `proxy_read_timeout`.
 3. **OAuth flow failing silently** — re-run the four verification commands above in sequence to identify which layer is broken.
 4. **Token mismatch** — the `ORCHESTRATOR_API_TOKEN` used by the console and the MCP backend must be the same value.
+
+Current production shortcut:
+
+```bash
+ssh <deploy-user>@<droplet-host> '
+systemctl status masa-orchestrator-backend --no-pager &&
+systemctl status masa-orchestrator-console --no-pager
+'
+```

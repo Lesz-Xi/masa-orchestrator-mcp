@@ -57,14 +57,14 @@ describe("DelegationStore", () => {
       taskId: "TASK-002",
       taskType: "Implementation",
       newStatus: "delegated",
-      agent: "gpt",
+      agent: "codex",
       notes: "queued",
     });
 
     await store.updateTask({
       taskId: "TASK-002",
       newStatus: "in_progress",
-      agent: "gpt",
+      agent: "codex",
       notes: "started",
     });
 
@@ -72,7 +72,7 @@ describe("DelegationStore", () => {
       store.updateTask({
         taskId: "TASK-002",
         newStatus: "in_progress",
-        agent: "gpt",
+        agent: "codex",
         notes: "still running",
       })
     ).resolves.toBeDefined();
@@ -82,5 +82,41 @@ describe("DelegationStore", () => {
 
     expect(task?.currentStatus).toBe("in_progress");
     expect(task?.history.at(-1)?.notes).toBe("still running");
+  });
+
+  it("normalizes legacy gpt agent entries to codex on read", async () => {
+    const dir = makeTempDir("masa-state-");
+    tempDirs.push(dir);
+    const stateFile = path.join(dir, ".orchestration-state.json");
+    fs.writeFileSync(
+      stateFile,
+      JSON.stringify({
+        version: 2,
+        tasks: [
+          {
+            taskId: "TASK-003",
+            taskType: "Implementation",
+            currentStatus: "delegated",
+            currentAgent: "gpt",
+            history: [
+              {
+                status: "delegated",
+                agent: "gpt",
+                timestamp: "2026-03-26T00:00:00.000Z",
+                notes: "legacy entry",
+              },
+            ],
+          },
+        ],
+        blockers: [],
+        activityLog: [],
+      })
+    );
+
+    const store = new DelegationStore(stateFile);
+    const state = await store.read();
+
+    expect(state.tasks[0]?.currentAgent).toBe("codex");
+    expect(state.tasks[0]?.history[0]?.agent).toBe("codex");
   });
 });

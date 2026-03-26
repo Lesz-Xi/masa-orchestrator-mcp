@@ -1,3 +1,9 @@
+import {
+  ALLOWED_TRANSITIONS,
+  type DelegationAgent,
+  type DelegationStatus,
+} from "../../../src/delegation-contract";
+
 // Typed shapes for all MCP tool responses consumed by the console UI.
 
 export type ViewKey =
@@ -36,23 +42,11 @@ export interface BenchmarkSnapshot {
 
 // ── Delegation types ─────────────────────────────────────────────────────────
 
-export type DelegationAgent = "gemini" | "claude" | "gpt";
-
-export type TaskStatus =
-  | "delegated"
-  | "in_review"
-  | "approved"
-  | "in_progress"
-  | "delivered"
-  | "verified"
-  | "consolidated"
-  | "rejected"
-  | "rework"
-  | "blocked";
+export type TaskStatus = DelegationStatus;
 
 export interface HistoryEntry {
-  status: string;
-  agent: string;
+  status: DelegationStatus;
+  agent: DelegationAgent;
   timestamp: string;
   notes: string;
 }
@@ -60,8 +54,8 @@ export interface HistoryEntry {
 export interface DelegationTask {
   taskId: string;
   taskType: string;
-  currentStatus: string;
-  currentAgent: string;
+  currentStatus: DelegationStatus;
+  currentAgent: DelegationAgent;
   history: HistoryEntry[];
 }
 
@@ -162,17 +156,6 @@ export interface DashboardSnapshot {
   delegation: DelegationState | null;
 }
 
-// ── Transition graph (mirrors server-side allowedTransitions) ─────────────────
+// ── Transition graph (shared with the server) ─────────────────────────────────
 
-export const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  delegated: ["in_review", "in_progress", "rejected", "blocked"],
-  in_review: ["approved", "rejected", "blocked"],
-  approved: ["delegated", "in_progress", "blocked"],
-  in_progress: ["delivered", "blocked", "rejected"],
-  delivered: ["verified", "rejected", "blocked"],
-  verified: ["consolidated"],
-  consolidated: [],
-  rejected: ["rework"],
-  rework: ["delegated", "in_progress"],
-  blocked: ["in_review", "approved", "in_progress", "rework", "rejected"],
-};
+export { ALLOWED_TRANSITIONS };

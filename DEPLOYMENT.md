@@ -19,6 +19,57 @@ That means a remote deployment only works if the host machine has:
 
 This server is not yet a stateless hosted SaaS service. It is a repo-aware MCP server that must run where the MASA files exist.
 
+## Current Production Target
+
+The current production deployment is a single DigitalOcean Droplet reached over SSH:
+
+- host: `<deploy-user>@<droplet-host>`
+- app root: `/srv/masa/masa-orchestrator-mcp`
+- backend service: `masa-orchestrator-backend`
+- console service: `masa-orchestrator-console`
+
+The deployment model is not abstract here. The repo should assume:
+
+- backend code lives at `/srv/masa/masa-orchestrator-mcp`
+- console code lives at `/srv/masa/masa-orchestrator-mcp/console`
+- MASA workspaces are mounted locally on the same Droplet under `/srv/masa`
+
+## SSH Deployment Commands
+
+Pull only:
+
+```bash
+ssh <deploy-user>@<droplet-host> 'cd /srv/masa/masa-orchestrator-mcp && git pull origin main'
+```
+
+Full backend + console rebuild and restart:
+
+```bash
+ssh <deploy-user>@<droplet-host> '
+cd /srv/masa/masa-orchestrator-mcp &&
+git pull origin main &&
+npm ci &&
+npm run build &&
+systemctl restart masa-orchestrator-backend &&
+cd /srv/masa/masa-orchestrator-mcp/console &&
+npm run build &&
+systemctl restart masa-orchestrator-console
+'
+```
+
+Post-deploy checks:
+
+```bash
+ssh <deploy-user>@<droplet-host> '
+systemctl status masa-orchestrator-backend --no-pager &&
+systemctl status masa-orchestrator-console --no-pager
+'
+```
+
+```bash
+curl -s https://mcp.wuweism.com/health | jq .
+```
+
 ## Supported Remote Transport
 
 Remote deployment uses:
@@ -40,7 +91,7 @@ The browser should not call `POST /mcp` directly. The operator console proxies r
 
 - Node.js 20+
 - npm
-- a checked-out copy of the `masa-orchestration` repo
+- a checked-out copy of the `masa-orchestrator-mcp` repo
 - a checked-out MASA workspace with:
   - `Agentic-Spec-Driven-Audit`
   - `synthesis-engine/src`
@@ -284,8 +335,9 @@ This is the simplest current deployment model.
 
 Recommended setup:
 
-- clone `masa-orchestrator-mcp`
-- clone or sync the MASA workspace onto the same machine
+- provision a Droplet or equivalent VPS
+- clone `masa-orchestrator-mcp` to `/srv/masa/masa-orchestrator-mcp`
+- clone or sync the MASA workspace onto the same machine under `/srv/masa`
 - run under `systemd`, `pm2`, or Docker
 - put Nginx or Caddy in front for HTTPS
 - route `/mcp` to the Node process
@@ -294,7 +346,8 @@ Example process flow:
 
 ```bash
 git clone https://github.com/Lesz-Xi/masa-orchestrator-mcp.git
-cd masa-orchestrator-mcp
+mv masa-orchestrator-mcp /srv/masa/masa-orchestrator-mcp
+cd /srv/masa/masa-orchestrator-mcp
 npm ci
 npm run build
 export AUDIT_ROOT=/srv/masa/Agentic-Spec-Driven-Audit
@@ -331,6 +384,8 @@ Recommended console startup port on the same host:
 ```bash
 PORT=3200 npm run start
 ```
+
+If you are operating the current production Droplet, prefer the SSH deployment commands earlier in this document instead of re-running the bootstrap flow manually.
 
 Example Nginx split for `wuweism.com`:
 

@@ -2,6 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { ACTIVITY_LOG_LIMIT } from "../constants.js";
+import {
+  ALLOWED_TRANSITIONS,
+  delegationStatusSchema,
+  normalizeDelegationAgent,
+  type DelegationAgent,
+  type DelegationStatus,
+} from "../delegation-contract.js";
 import type {
   ActivityLogEntry,
   BenchmarkStatusSnapshot,
@@ -9,20 +16,7 @@ import type {
   DelegationTask,
 } from "../types.js";
 
-const allowedTransitions: Record<string, string[]> = {
-  delegated: ["in_review", "in_progress", "rejected", "blocked"],
-  in_review: ["approved", "rejected", "blocked"],
-  approved: ["delegated", "in_progress", "blocked"],
-  in_progress: ["delivered", "blocked", "rejected"],
-  delivered: ["verified", "rejected", "blocked"],
-  verified: ["consolidated"],
-  consolidated: [],
-  rejected: ["rework"],
-  rework: ["delegated", "in_progress"],
-  blocked: ["in_review", "approved", "in_progress", "rework", "rejected"],
-};
-
-const KNOWN_STATUSES = new Set(Object.keys(allowedTransitions));
+const KNOWN_STATUSES = new Set(delegationStatusSchema.options);
 
 function initialState(): DelegationStateFile {
   return {
@@ -47,11 +41,42 @@ function normalizeState(raw: unknown): DelegationStateFile {
 
   return {
     version: 2,
-    tasks: Array.isArray(candidate.tasks) ? candidate.tasks : [],
+    tasks: Array.isArray(candidate.tasks)
+      ? candidate.tasks.flatMap((task) => normalizeTask(task))
+      : [],
     benchmarkSnapshot: candidate.benchmarkSnapshot,
     blockers: Array.isArray(candidate.blockers) ? candidate.blockers : [],
     activityLog: Array.isArray(candidate.activityLog) ? candidate.activityLog : [],
   };
+}
+
+function normalizeTask(task: DelegationTask): DelegationTask[] {
+  try {
+    return [
+      {
+        ...task,
+        currentStatus: delegationStatusSchema.parse(task.currentStatus),
+        currentAgent: normalizeDelegationAgent(task.currentAgent),
+        history: Array.isArray(task.history)
+          ? task.history.flatMap((entry) => {
+              try {
+                return [
+                  {
+                    ...entry,
+                    status: delegationStatusSchema.parse(entry.status),
+                    agent: normalizeDelegationAgent(entry.agent),
+                  },
+                ];
+              } catch {
+                return [];
+              }
+            })
+          : [],
+      },
+    ];
+  } catch {
+    return [];
+  }
 }
 
 export class DelegationStore {
@@ -76,8 +101,8 @@ export class DelegationStore {
   async updateTask(input: {
     taskId: string;
     taskType?: string;
-    newStatus: string;
-    agent: string;
+    newStatus: DelegationStatus;
+    agent: DelegationAgent;
     notes?: string;
   }): Promise<DelegationStateFile> {
     const state = await this.read();
@@ -134,7 +159,7 @@ export class DelegationStore {
       return state;
     }
 
-    const allowed = allowedTransitions[existing.currentStatus] ?? [];
+    const allowed = ALLOWED_TRANSITIONS[existing.currentStatus] ?? [];
     if (!allowed.includes(input.newStatus)) {
       throw new Error(
         `Invalid status transition: ${existing.currentStatus} -> ${input.newStatus}`

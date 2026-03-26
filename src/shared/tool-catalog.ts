@@ -1,4 +1,5 @@
 import type { ToolCatalogEntry } from "../types.js";
+import { DELEGATION_AGENT_LIST, DELEGATION_STATUS_LIST } from "../delegation-contract.js";
 
 export const TOOL_CATALOG: ToolCatalogEntry[] = [
   {
@@ -64,9 +65,16 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     recommendedInputs: [
       "Engine-core path for v1.0 compliance scans",
       "Narrow path slices when investigating noisy output",
+      "Path must be inside AUDIT_ROOT or ENGINE_ROOT",
     ],
     fields: [
-      { name: "path", label: "Scan Path", kind: "text", required: true, placeholder: "/abs/path/to/src" },
+      {
+        name: "path",
+        label: "Scan Path",
+        kind: "text",
+        required: true,
+        placeholder: "Path under AUDIT_ROOT or ENGINE_ROOT",
+      },
       { name: "glob", label: "Glob Filter", kind: "text", placeholder: "**/*.ts" },
       {
         name: "scope",
@@ -88,6 +96,7 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     recommendedInputs: [
       "Focused files or directories under review",
       "Current benchmark passing count for claim calibration",
+      "Path must be inside AUDIT_ROOT or ENGINE_ROOT",
     ],
     fields: [
       { name: "path", label: "Audit Path", kind: "text", required: true, placeholder: "/abs/path/to/file-or-dir" },
@@ -174,12 +183,17 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
       },
       { name: "taskId", label: "Task ID", kind: "text", placeholder: "TASK-009" },
       { name: "taskType", label: "Task Type", kind: "text", placeholder: "Implementation" },
-      { name: "newStatus", label: "New Status", kind: "text", placeholder: "in_progress" },
+      {
+        name: "newStatus",
+        label: "New Status",
+        kind: "select",
+        options: [...DELEGATION_STATUS_LIST],
+      },
       {
         name: "agent",
         label: "Agent",
         kind: "select",
-        options: ["gemini", "claude", "gpt"],
+        options: [...DELEGATION_AGENT_LIST],
       },
       {
         name: "notes",
@@ -214,9 +228,16 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
     summary: "Check engine-core files against the declared v1 assumption envelope.",
     recommendedInputs: [
       "Use engine-core slices instead of the entire workspace",
+      "Path must be inside AUDIT_ROOT or ENGINE_ROOT",
     ],
     fields: [
-      { name: "path", label: "Path", kind: "text", required: true, placeholder: "/abs/path/to/engine-core" },
+      {
+        name: "path",
+        label: "Path",
+        kind: "text",
+        required: true,
+        placeholder: "Path under AUDIT_ROOT or ENGINE_ROOT",
+      },
     ],
   },
   {

@@ -1,3 +1,5 @@
+import type { DelegationAgent, DelegationStatus } from "./delegation-contract.js";
+
 export type FileClass =
   | "engine-core"
   | "support"
@@ -134,8 +136,8 @@ export interface BenchmarkStatusSnapshot {
 }
 
 export interface DelegationHistoryEntry {
-  status: string;
-  agent: string;
+  status: DelegationStatus;
+  agent: DelegationAgent;
   timestamp: string;
   notes: string;
 }
@@ -143,8 +145,8 @@ export interface DelegationHistoryEntry {
 export interface DelegationTask {
   taskId: string;
   taskType: string;
-  currentStatus: string;
-  currentAgent: string;
+  currentStatus: DelegationStatus;
+  currentAgent: DelegationAgent;
   history: DelegationHistoryEntry[];
 }
 

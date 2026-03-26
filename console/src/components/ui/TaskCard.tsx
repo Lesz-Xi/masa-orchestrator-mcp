@@ -111,9 +111,9 @@ export function TaskCard({ task, onTransition }: TaskCardProps) {
                   onChange={(e) => setSelectedAgent(e.target.value as DelegationAgent)}
                   className="task-transition__select"
                 >
+                  <option value="codex">codex</option>
                   <option value="claude">claude</option>
                   <option value="gemini">gemini</option>
-                  <option value="gpt">gpt</option>
                 </select>
               </div>
               <textarea
