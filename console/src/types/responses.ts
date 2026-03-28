@@ -4,6 +4,8 @@ import {
   type DelegationStatus,
 } from "../../../src/delegation-contract";
 
+export type { DelegationAgent, DelegationStatus } from "../../../src/delegation-contract";
+
 // Typed shapes for all MCP tool responses consumed by the console UI.
 
 export type ViewKey =

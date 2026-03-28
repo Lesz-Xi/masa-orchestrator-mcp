@@ -1,5 +1,18 @@
 import type { ToolCatalogEntry } from "../types.js";
-import { DELEGATION_AGENT_LIST, DELEGATION_STATUS_LIST } from "../delegation-contract.js";
+
+const DELEGATION_AGENT_OPTIONS = ["codex", "claude", "gemini"] as const;
+const DELEGATION_STATUS_OPTIONS = [
+  "delegated",
+  "in_review",
+  "approved",
+  "in_progress",
+  "delivered",
+  "verified",
+  "consolidated",
+  "rejected",
+  "rework",
+  "blocked",
+] as const;
 
 export const TOOL_CATALOG: ToolCatalogEntry[] = [
   {
@@ -187,13 +200,13 @@ export const TOOL_CATALOG: ToolCatalogEntry[] = [
         name: "newStatus",
         label: "New Status",
         kind: "select",
-        options: [...DELEGATION_STATUS_LIST],
+        options: [...DELEGATION_STATUS_OPTIONS],
       },
       {
         name: "agent",
         label: "Agent",
         kind: "select",
-        options: [...DELEGATION_AGENT_LIST],
+        options: [...DELEGATION_AGENT_OPTIONS],
       },
       {
         name: "notes",
